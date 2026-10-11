@@ -40,6 +40,8 @@
 img { max-width: 100%; }
 .evo .ev-stage img, .bspr img, .mon-vis img { max-width: none; }
 html, body { height: 100%; }
+html { touch-action: manipulation; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+.stage, .field, .spr, .emb { -webkit-touch-callout: none; }
 body {
   margin: 0; background: var(--ink); color: var(--text);
   font-family: var(--body); font-size: 15px; line-height: 1.45;
@@ -357,7 +359,7 @@ main { flex: 1; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling
 .card p { margin: 0 0 8px; color: var(--muted); font-size: 13.5px; }
 .toggle { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 6px 0; font-size: 14px; }
 .toggle input { width: 22px; height: 22px; accent-color: var(--gold); }
-textarea { width: 100%; min-height: 84px; background: #0b0d1c; color: var(--text); border: 1px solid var(--line); border-radius: 10px; padding: 8px; font-family: ui-monospace, monospace; font-size: 12px; resize: vertical; }
+textarea { width: 100%; min-height: 84px; background: #0b0d1c; color: var(--text); border: 1px solid var(--line); border-radius: 10px; padding: 8px; font-family: ui-monospace, monospace; font-size: 16px; resize: vertical; }
 .help li { margin-bottom: 6px; color: var(--muted); font-size: 13.5px; }
 .help li b { color: var(--text); }
 .fine { font-size: 12px; color: var(--faint); }
@@ -369,6 +371,11 @@ textarea { width: 100%; min-height: 84px; background: #0b0d1c; color: var(--text
 }
 body.calm .mon-vis .bob, body.calm .btn.fight { animation: none; }
 </style>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-title" content="Idle-Trainer">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 </head>
 <body>
 
@@ -1860,5 +1867,6 @@ function winBattle(W, S, events = []) {
 
 </script>
 
+<script>if ('serviceWorker' in navigator && location.protocol === 'https:') { window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function () {}); }); }</script>
 </body>
 </html>
