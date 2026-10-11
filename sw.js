@@ -1,5 +1,5 @@
-// Offline start for the home-screen app. Network first, so updates arrive as soon as you are online.
-const CACHE = 'pkidle-v1';
+// Offline start for the home-screen app. Network first and revalidated, so updates arrive as soon as you are online.
+const CACHE = 'pkidle-v2';
 const CORE = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './apple-touch-icon.png'];
 
 self.addEventListener('install', e => {
@@ -17,9 +17,9 @@ self.addEventListener('activate', e => {
 self.addEventListener('fetch', e => {
   const req = e.request;
   if (req.method !== 'GET') return;
-  if (new URL(req.url).origin !== self.location.origin) return; // sprites, fonts, PokéAPI: straight to the network
+  if (new URL(req.url).origin !== self.location.origin) return; // sprites, fonts, PokeAPI: straight to the network
   e.respondWith(
-    fetch(req)
+    fetch(req.url, { cache: 'no-cache', credentials: 'same-origin' })
       .then(res => {
         if (res.ok) { const copy = res.clone(); caches.open(CACHE).then(c => c.put(req, copy)); }
         return res;

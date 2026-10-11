@@ -354,6 +354,13 @@ main { flex: 1; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling
 .itemrow b { font-family: var(--display); font-weight: 500; }
 
 .more-list { display: grid; gap: 8px; }
+.btnrow { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.btnrow > .btn { flex: 1 1 130px; }
+label.btn { cursor: pointer; }
+.vh { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; border: 0; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; }
+.vh:focus-visible + label { outline: 2px solid var(--gold); outline-offset: 2px; }
+.card .svmsg { margin: 10px 0 0; font-size: 13px; color: var(--muted); }
+.card .svmsg.bad { color: var(--bad); }
 .card { background: var(--panel); border-radius: 16px; padding: 14px; box-shadow: inset 0 0 0 1px var(--line); }
 .card h3 { margin: 0 0 6px; font-size: 15px; }
 .card p { margin: 0 0 8px; color: var(--muted); font-size: 13.5px; }
@@ -941,7 +948,7 @@ function winBattle(W, S, events = []) {
     document.body.classList.toggle('calm', !!S.settings.calm);
     renderHeader();
     if (tab === 'train') renderTrain(); else if (tab === 'shop') renderShop(); else if (tab === 'dex') renderDex(); else renderMore();
-    if (pendingStarter() && !curSheet) openStarter();
+    if (pendingStarter() && !curSheet && tab === 'train') openStarter();
   }
 
   // ---------- header ----------
@@ -1423,8 +1430,11 @@ function winBattle(W, S, events = []) {
     const first = r === 0;
     const el = openSheet(`<h2>${first ? 'Wähle dein erstes Pokémon' : 'Willkommen in ' + esc(W.R[r][0]) + '!'}</h2>
       <p>${first ? 'Es trainiert ab jetzt jede Sekunde für dich. ' : 'Wähle deinen Partner für die neue Region. '}Die beiden anderen folgen direkt danach, dann geht es in Pokédex-Reihenfolge weiter.</p>
-      <div class="starters">${cards}</div>`, { dismissible: false });
+      <div class="starters">${cards}</div>
+      ${first ? '<button class="btn ghost small" id="st-import" style="margin-top:12px;width:100%">Spielstand von einem anderen Gerät laden</button>' : ''}`, { dismissible: false });
     curSheet.kind = 'starter';
+    const imp = $('#st-import', el);
+    if (imp) imp.onclick = () => { closeSheet(true); setTab('more'); };
     $$('[data-st]', el).forEach(b => b.onclick = () => {
       S.starters[r] = +b.dataset.st;
       S.seen[ctx(W, S).sp.id] = 1;
@@ -1713,13 +1723,225 @@ function winBattle(W, S, events = []) {
     $('#gd-ok').onclick = () => { closeSheet(true); setTab('dex'); };
   }
 
+  // ---------- save transfer: file and code ----------
+  // Code format 2: PKIDLE2:<base64url> of [2][fnv1a x4][json length x2][json][reg length x2][reg bytes][seen length x2][seen bits]
+  const NPOKE = 386;
+  const pad2 = n => String(n).padStart(2, '0');
+  function b64uEncode(bytes) {
+    let bin = '';
+    for (let i = 0; i < bytes.length; i += 4096) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 4096));
+    return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  }
+  function b64uDecode(str) {
+    let t = str.replace(/-/g, '+').replace(/_/g, '/');
+    if (t.length % 4 === 1) throw new Error('length');
+    while (t.length % 4) t += '=';
+    const bin = atob(t);
+    const out = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+    return out;
+  }
+  function fnv1a(bytes, from) {
+    let h = 0x811c9dc5;
+    for (let i = from; i < bytes.length; i++) { h ^= bytes[i]; h = Math.imul(h, 0x01000193); }
+    return h >>> 0;
+  }
+  function packSave(st) {
+    const core = {};
+    for (const k of Object.keys(st)) if (k !== 'reg' && k !== 'seen' && k !== 'regCount') core[k] = st[k];
+    const json = new TextEncoder().encode(JSON.stringify(core, (k, v) => (typeof v === 'number' && isFinite(v) && !Number.isInteger(v) ? +v.toPrecision(10) : v)));
+    const reg = st.reg || {}, seen = st.seen || {};
+    let nr = 0; for (let id = NPOKE; id >= 1; id--) if (reg[id]) { nr = id; break; }
+    let ns = 0; for (let id = NPOKE; id >= 1; id--) if (seen[id] || reg[id]) { ns = Math.ceil(id / 8); break; }
+    const out = new Uint8Array(7 + json.length + 2 + nr + 2 + ns);
+    let o = 0;
+    out[o++] = 2; o += 4;
+    out[o++] = json.length >> 8; out[o++] = json.length & 255;
+    out.set(json, o); o += json.length;
+    out[o++] = nr >> 8; out[o++] = nr & 255;
+    for (let id = 1; id <= nr; id++) out[o++] = reg[id] ? clamp(Math.round(+reg[id]) || 1, 1, 255) : 0;
+    out[o++] = ns >> 8; out[o++] = ns & 255;
+    for (let id = 1; id <= ns * 8; id++) if (seen[id] || reg[id]) out[o + ((id - 1) >> 3)] |= 1 << ((id - 1) & 7);
+    const h = fnv1a(out, 5);
+    out[1] = h >>> 24; out[2] = (h >>> 16) & 255; out[3] = (h >>> 8) & 255; out[4] = h & 255;
+    return 'PKIDLE2:' + b64uEncode(out);
+  }
+  function unpackV2(bytes) {
+    if (bytes.length < 11 || bytes[0] !== 2) return null;
+    const h = ((bytes[1] << 24) | (bytes[2] << 16) | (bytes[3] << 8) | bytes[4]) >>> 0;
+    if (fnv1a(bytes, 5) !== h) return null;
+    let o = 5;
+    const jl = (bytes[o] << 8) | bytes[o + 1]; o += 2;
+    if (o + jl + 4 > bytes.length) return null;
+    const core = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes.subarray(o, o + jl))); o += jl;
+    const nr = (bytes[o] << 8) | bytes[o + 1]; o += 2;
+    if (nr > NPOKE || o + nr + 2 > bytes.length) return null;
+    const reg = {};
+    for (let id = 1; id <= nr; id++) { const v = bytes[o++]; if (v) reg[id] = v; }
+    const ns = (bytes[o] << 8) | bytes[o + 1]; o += 2;
+    if (o + ns !== bytes.length) return null;
+    const seen = {};
+    for (let i = 0; i < ns * 8 && i < NPOKE; i++) if (bytes[o + (i >> 3)] & (1 << (i & 7))) seen[i + 1] = 1;
+    core.reg = reg; core.seen = seen;
+    return core;
+  }
+  // Finds a save code anywhere in pasted text or a file and repairs what chat apps do to long codes:
+  // invisible characters, line breaks, extra text around it, percent-encoding, "+" turned into spaces.
+  const cc = list => list.map(c => (Array.isArray(c) ? String.fromCharCode(c[0]) + '-' + String.fromCharCode(c[1]) : String.fromCharCode(c))).join('');
+  const INVISIBLE = new RegExp('[' + cc([0xAD, 0x34F, 0x61C, 0x115F, 0x1160, 0x17B4, 0x17B5, 0x180E, [0x200B, 0x200F], [0x202A, 0x202E], [0x2060, 0x206F], [0xFE00, 0xFE0F], 0xFEFF]) + ']', 'g');
+  function readSaveText(text) {
+    let t = String(text || '').replace(INVISIBLE, '');
+    t = t.replace(/%2B/gi, '+').replace(/%2F/gi, '/').replace(/%3D/gi, '=').replace(/%3A/gi, ':');
+    const re = /PKIDLE\s*([12])\s*[:：]/gi;
+    let m, found = false;
+    while ((m = re.exec(t))) {
+      found = true;
+      const ver = m[1];
+      const chunks = t.slice(m.index + m[0].length).split(/\s+/).filter(Boolean).slice(0, 400);
+      for (let k = chunks.length; k >= 1; k--) {
+        const joins = ver === '2' ? [''] : ['', '+'];
+        for (const j of joins) {
+          const cand = chunks.slice(0, k).join(j).replace(ver === '2' ? /[^A-Za-z0-9\-_]/g : /[^A-Za-z0-9+/=]/g, '');
+          if (!cand) continue;
+          try {
+            let obj;
+            if (ver === '2') obj = unpackV2(b64uDecode(cand));
+            else { const bin = atob(cand); obj = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(Uint8Array.from(bin, c => c.charCodeAt(0)))); }
+            const st = obj && sanitize(obj);
+            if (st) return { state: st };
+          } catch (e) { /* try a shorter candidate */ }
+        }
+      }
+    }
+    return { error: found ? 'broken' : 'none' };
+  }
+  function summarize(st) {
+    const order = lineOrder(W, st.starters);
+    const line = W.lines[order[Math.min(st.li, order.length - 1)]];
+    const r = line.region;
+    const noStarter = !st.done && st.starters[r] == null && st.li === regionStart(W, r);
+    const sp = W.P[line.m[Math.min(st.stage, line.m.length - 1)] - 1];
+    return { mon: noStarter ? null : sp.name, lvl: st.lvl, region: W.R[r][0], dex: Object.keys(st.reg || {}).length, coins: st.coins, savedAt: st.savedAt, done: !!st.done };
+  }
+  function svMsg(text, bad) {
+    const el = $('#sv-msg'); if (!el) return;
+    el.textContent = text || ''; el.hidden = !text; el.classList.toggle('bad', !!bad);
+  }
+  function handleImportText(text) {
+    const r = readSaveText(text);
+    if (r.state) { svMsg(''); confirmImport(r.state); return; }
+    svMsg(r.error === 'none'
+      ? 'Darin steckt kein Spielstand. Ein Code beginnt mit PKIDLE.'
+      : 'Der Code ist unvollständig oder beschädigt. Kopiere ihn noch einmal komplett oder nutze die Datei.', true);
+  }
+  function confirmImport(st) {
+    const a = summarize(st);
+    const when = a.savedAt ? new Date(a.savedAt).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'unbekannt';
+    const el = openSheet(`<h2>Spielstand übernehmen?</h2>
+      <div class="kv">
+        <span>Partner</span><b>${a.done ? 'Reise abgeschlossen' : a.mon ? esc(a.mon) + ' Lv. ' + a.lvl : 'noch nicht gewählt'}</b>
+        <span>Region</span><b>${esc(a.region)}</b>
+        <span>Pokédex gelevelt</span><b>${a.dex} / ${NPOKE}</b>
+        <span>Coins</span><b>${fInt(a.coins)}</b>
+        <span>Gespeichert</span><b>${esc(when)}</b>
+      </div>
+      <p style="margin-top:10px">Der Spielstand auf diesem Gerät wird dabei ersetzt.</p>
+      <div class="row"><button class="btn ghost" id="ci-no">Abbrechen</button><button class="btn gold" id="ci-yes">Übernehmen</button></div>`);
+    $('#ci-no', el).onclick = () => closeSheet();
+    $('#ci-yes', el).onclick = () => {
+      closeSheet(true); closeBattle(true);
+      S = st; S.savedAt = Date.now(); bootSavedAt = S.savedAt;
+      markDirty(); saveLocal();
+      dexRegion = null; actionKey = '';
+      setTab('train'); toast('Spielstand geladen');
+    };
+  }
+  function saveFile() {
+    saveLocal();
+    const code = packSave(S);
+    const a = summarize(S);
+    const now = new Date();
+    const lines = ['Pokémon Idle-Trainer: Spielstand', 'Gespeichert: ' + now.toLocaleString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })];
+    if (a.mon) lines.push(`Partner: ${a.mon} Lv. ${a.lvl}`);
+    lines.push(`Pokédex gelevelt: ${a.dex}/${NPOKE}`, '', 'Laden: im Spiel unter „Mehr“ auf „Datei laden“ tippen.', '', code, '');
+    return { name: `idle-trainer-spielstand-${now.getFullYear()}-${pad2(now.getMonth() + 1)}-${pad2(now.getDate())}.txt`, text: lines.join('\n') };
+  }
+  function exportFile() {
+    let f;
+    try { f = saveFile(); } catch (e) { svMsg('Die Datei konnte nicht erstellt werden.', true); return; }
+    const C = window.claude;
+    if (C && typeof C.use === 'function') { // inside claude.ai: files go through the viewer's download prompt
+      C.use('downloads').then(dl => {
+        if (!dl) { svMsg('In dieser Ansicht lässt sich keine Datei speichern. Nutze „Code kopieren“.', true); return; }
+        return dl.save({ filename: f.name, data: f.text }).then(() => toast('Datei gespeichert'), e => {
+          if (e && (e.code === 'declined' || e.code === 'rate_limited')) return;
+          svMsg('In dieser Ansicht lässt sich keine Datei speichern. Nutze „Code kopieren“.', true);
+        });
+      }, () => svMsg('In dieser Ansicht lässt sich keine Datei speichern. Nutze „Code kopieren“.', true));
+      return;
+    }
+    const blob = new Blob([f.text], { type: 'text/plain' });
+    const download = () => {
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url; link.download = f.name; link.rel = 'noopener';
+      document.body.appendChild(link); link.click();
+      setTimeout(() => { URL.revokeObjectURL(url); link.remove(); }, 4000);
+      toast('Download gestartet');
+    };
+    const touch = matchMedia('(pointer: coarse)').matches;
+    if (touch && navigator.share && navigator.canShare && typeof File === 'function') {
+      let file = null;
+      try { file = new File([blob], f.name, { type: 'text/plain' }); } catch (e) { file = null; }
+      if (file && navigator.canShare({ files: [file] })) {
+        navigator.share({ files: [file], title: 'Idle-Trainer Spielstand' }).catch(e => { if (!e || e.name !== 'AbortError') download(); });
+        return;
+      }
+    }
+    download();
+  }
+  function copyCode() {
+    let code;
+    try { code = (saveLocal(), packSave(S)); } catch (e) { svMsg('Der Code konnte nicht erstellt werden.', true); return; }
+    const box = $('#ex-box'), ta = $('#ex-ta');
+    ta.value = code; $('#im-box').hidden = true;
+    const fallback = () => {
+      box.hidden = false; ta.focus(); ta.select();
+      try { ta.setSelectionRange(0, ta.value.length); } catch (e) { /* older browsers */ }
+      svMsg('Code markiert. Jetzt kopieren.');
+    };
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(code).then(() => { box.hidden = true; svMsg(''); toast('Code kopiert'); }, fallback);
+      else fallback();
+    } catch (e) { fallback(); }
+  }
+
   // ---------- more ----------
   let resetArmed = false;
   function renderMore() {
     const v = $('#v-more');
     const st = S.stats;
+    const canPaste = !window.claude && navigator.clipboard && typeof navigator.clipboard.readText === 'function';
     v.innerHTML = `<h2 class="h2">Mehr</h2>
       <div class="more-list">
+        <div class="card"><h3>Spielstand</h3>
+          <p>Dein Fortschritt wird automatisch auf diesem Gerät gespeichert${cloud.ref ? ' und zusätzlich in deinem Claude-Konto' : ''}. Für ein anderes Gerät sicherst du ihn als Datei und öffnest sie dort mit „Datei laden“.</p>
+          <div class="btnrow">
+            <button class="btn small gold" id="sv-file">Datei sichern</button>
+            <input type="file" id="im-file" class="vh" accept=".txt,.json,text/plain,application/json">
+            <label class="btn small" for="im-file">Datei laden</label>
+          </div>
+          <div class="btnrow">
+            <button class="btn small" id="sv-copy">Code kopieren</button>
+            <button class="btn small" id="im-btn">Code einfügen</button>
+          </div>
+          <p class="svmsg" id="sv-msg" role="status" hidden></p>
+          <div id="ex-box" hidden style="margin-top:10px"><textarea id="ex-ta" readonly aria-label="Spielstand-Code"></textarea></div>
+          <div id="im-box" hidden style="margin-top:10px">
+            <textarea id="im-ta" aria-label="Spielstand-Code einfügen" placeholder="Code hier einfügen" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></textarea>
+            <div class="btnrow">${canPaste ? '<button class="btn small" id="im-paste">Aus Zwischenablage</button>' : ''}<button class="btn small gold" id="im-go">Spielstand laden</button></div>
+          </div>
+          <div style="margin-top:14px"><button class="btn small ghost" id="rs-btn">${resetArmed ? 'Wirklich alles löschen? Tippe nochmal' : 'Neu anfangen'}</button></div></div>
         <div class="card"><h3>Statistik</h3><div class="kv">
           <span>Aktive Spielzeit</span><b>${fTime(st.time)}</b>
           <span>Pension (offline)</span><b>${fTime(st.away || 0)}</b>
@@ -1727,16 +1949,10 @@ function winBattle(W, S, events = []) {
           <span>Entwicklungen</span><b>${st.evos}</b>
           <span>Kämpfe gewonnen / verloren</span><b>${st.wins} / ${st.losses}</b>
           <span>Coins insgesamt</span><b>${fInt(S.life)}</b>
-          <span>Pokédex gelevelt</span><b>${S.regCount} / 386</b></div></div>
+          <span>Pokédex gelevelt</span><b>${S.regCount} / ${NPOKE}</b></div></div>
         <div class="card"><h3>Einstellungen</h3>
           <label class="toggle"><span>Vibration beim Tippen (Android)</span><input type="checkbox" id="set-vibe" ${S.settings.vibe ? 'checked' : ''}></label>
           <label class="toggle"><span>Ruhige Animationen</span><input type="checkbox" id="set-calm" ${S.settings.calm ? 'checked' : ''}></label></div>
-        <div class="card"><h3>Spielstand</h3>
-          <p>Gespeichert wird automatisch in diesem Browser${cloud.ref ? ' und zusätzlich in deinem Claude-Konto' : ''}. Mit dem Code ziehst du deinen Fortschritt auf ein anderes Gerät um.</p>
-          <div class="row" style="margin-top:0"><button class="btn small" id="ex-btn">Code anzeigen</button><button class="btn small" id="im-btn">Code einfügen</button></div>
-          <div id="ex-box" hidden style="margin-top:10px"><textarea id="ex-ta" readonly aria-label="Spielstand-Code"></textarea><button class="btn small" id="ex-copy" style="margin-top:6px">Kopieren</button></div>
-          <div id="im-box" hidden style="margin-top:10px"><textarea id="im-ta" aria-label="Spielstand-Code einfügen" placeholder="Code hier einfügen"></textarea><button class="btn small gold" id="im-go" style="margin-top:6px">Spielstand laden</button></div>
-          <div style="margin-top:12px"><button class="btn small" id="rs-btn">${resetArmed ? 'Wirklich alles löschen? Tippe nochmal' : 'Neu anfangen'}</button></div></div>
         <div class="card"><h3>So funktioniert's</h3><ul class="help">
           <li><b>Training:</b> Dein Pokémon sammelt jede Sekunde EP. Tippen bringt extra EP und Coins.</li>
           <li><b>Entwicklung:</b> Es entwickelt sich zu den Original-Levels. Steine kaufst du, sobald es so weit ist. Tausch- und Freundschaftsentwicklungen passieren hier per Level.</li>
@@ -1748,17 +1964,23 @@ function winBattle(W, S, events = []) {
       </div>`;
     $('#set-vibe').onchange = e => { S.settings.vibe = e.target.checked; markDirty(); };
     $('#set-calm').onchange = e => { S.settings.calm = e.target.checked; document.body.classList.toggle('calm', S.settings.calm); markDirty(); };
-    $('#ex-btn').onclick = () => { const b = $('#ex-box'); b.hidden = !b.hidden; $('#im-box').hidden = true; $('#ex-ta').value = exportCode(); };
-    $('#im-btn').onclick = () => { const b = $('#im-box'); b.hidden = !b.hidden; $('#ex-box').hidden = true; };
-    $('#ex-copy').onclick = () => {
-      const ta = $('#ex-ta');
-      try { navigator.clipboard.writeText(ta.value).then(() => toast('Code kopiert'), () => { ta.select(); toast('Markiert. Jetzt kopieren.'); }); }
-      catch (e) { ta.select(); toast('Markiert. Jetzt kopieren.'); }
+    $('#sv-file').onclick = exportFile;
+    $('#sv-copy').onclick = copyCode;
+    $('#im-btn').onclick = () => { const b = $('#im-box'); b.hidden = !b.hidden; $('#ex-box').hidden = true; svMsg(''); if (!b.hidden) $('#im-ta').focus(); };
+    $('#im-go').onclick = () => handleImportText($('#im-ta').value);
+    const pb = $('#im-paste');
+    if (pb) pb.onclick = () => {
+      navigator.clipboard.readText().then(t => { $('#im-ta').value = t; handleImportText(t); },
+        () => { svMsg('Kein Zugriff auf die Zwischenablage. Tippe lange in das Feld und wähle „Einfügen“.'); $('#im-ta').focus(); });
     };
-    $('#im-go').onclick = () => {
-      const s = importCode($('#im-ta').value);
-      if (!s) { toast('Der Code ist ungültig.'); return; }
-      closeBattle(true); S = s; S.savedAt = Date.now(); markDirty(); saveLocal(); dexRegion = null; renderAll(); toast('Spielstand geladen');
+    $('#im-file').onchange = e => {
+      const file = e.target.files && e.target.files[0];
+      if (!file) return;
+      if (file.size > 2e6) { e.target.value = ''; svMsg('Das ist keine Spielstand-Datei.', true); return; }
+      const reader = new FileReader();
+      reader.onload = () => { e.target.value = ''; handleImportText(String(reader.result || '')); };
+      reader.onerror = () => { e.target.value = ''; svMsg('Die Datei konnte nicht gelesen werden.', true); };
+      reader.readAsText(file);
     };
     $('#rs-btn').onclick = () => {
       if (!resetArmed) { resetArmed = true; renderMore(); setTimeout(() => { resetArmed = false; if (tab === 'more') renderMore(); }, 5000); return; }
@@ -1766,21 +1988,6 @@ function winBattle(W, S, events = []) {
       S = freshState(); markDirty(); saveLocal(); dexRegion = null; actionKey = '';
       setTab('train'); renderAll();
     };
-  }
-  function exportCode() {
-    const bytes = new TextEncoder().encode(JSON.stringify(S));
-    let bin = '';
-    for (let i = 0; i < bytes.length; i += 4096) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 4096));
-    return 'PKIDLE1:' + btoa(bin);
-  }
-  function importCode(code) {
-    try {
-      code = String(code || '').trim();
-      if (!code.startsWith('PKIDLE1:')) return null;
-      const bin = atob(code.slice(8));
-      const bytes = Uint8Array.from(bin, ch => ch.charCodeAt(0));
-      return sanitize(JSON.parse(new TextDecoder().decode(bytes)));
-    } catch (e) { return null; }
   }
 
   // ---------- offline progress ----------
