@@ -1324,7 +1324,6 @@ function gymWin(W, S, gi, events = []) {
   const SAVE_KEY = 'pkidle.save.v1'; // the key stays the same, the format version lives inside the save
   const BACKUP_KEY = 'pkidle.backup';
   let S = null;
-  let migratedFrom = 0;
   function freshState() {
     const s = newState();
     s.settings = { vibe: false, calm: false };
@@ -1394,21 +1393,24 @@ function gymWin(W, S, gi, events = []) {
     S.rev = (S.rev || 0) + 1; S.savedAt = Date.now(); S.gv = GAME_VERSION;
     try { localStorage.setItem(SAVE_KEY, JSON.stringify(S)); } catch (e) { /* storage unavailable: progress lives for this visit only */ }
   }
-  // Reads the local save. A save of an older format is first copied to BACKUP_KEY, then converted.
+  // A save of an older format is copied to BACKUP_KEY on this device before it gets converted.
+  function backupOld(raw, obj) {
+    const from = typeof obj.v === 'number' && obj.v >= 1 ? obj.v : 1;
+    if (from >= SAVE_VERSION) return 0;
+    try {
+      const prev = JSON.parse(localStorage.getItem(BACKUP_KEY) || 'null');
+      if (!prev || prev.raw !== raw) localStorage.setItem(BACKUP_KEY, JSON.stringify({ at: Date.now(), from, version: obj.gv || '1.0.0', raw }));
+    } catch (e) { /* no room for a backup: the old save stays untouched until the next autosave */ }
+    return from;
+  }
+  // Reads the local save and brings it to the current format.
   function loadLocal() {
     let raw = null, obj = null;
     try { raw = localStorage.getItem(SAVE_KEY); } catch (e) { return null; }
     if (!raw) return null;
     try { obj = JSON.parse(raw); } catch (e) { return null; }
     if (!isObj(obj)) return null;
-    const from = typeof obj.v === 'number' && obj.v >= 1 ? obj.v : 1;
-    if (from < SAVE_VERSION) {
-      try {
-        const prev = JSON.parse(localStorage.getItem(BACKUP_KEY) || 'null');
-        if (!prev || prev.raw !== raw) localStorage.setItem(BACKUP_KEY, JSON.stringify({ at: Date.now(), from, version: obj.gv || '1.0.0', raw }));
-      } catch (e) { /* no room for a backup: the old save stays untouched until the next autosave */ }
-      migratedFrom = from;
-    }
+    backupOld(raw, obj);
     return sanitize(obj);
   }
   function readBackup() {
@@ -1438,14 +1440,19 @@ function gymWin(W, S, gi, events = []) {
       cloud.ref = ref; cloud.status = 'aktiv';
       if (snap.exists) {
         const d = snap.data();
-        let remote = null;
-        try { remote = d && typeof d.json === 'string' ? sanitize(JSON.parse(d.json)) : null; } catch (e) { remote = null; }
+        let remote = null, obj = null;
+        try { obj = d && typeof d.json === 'string' ? JSON.parse(d.json) : null; remote = sanitize(obj); } catch (e) { remote = null; }
         if (remote && remote.savedAt > bootSavedAt + 30000) {
+          backupOld(d.json, obj);
+          sheetQueue.length = 0; // pending sheets belong to the replaced state
           closeSheet(true); closeBattle(true);
-          if (cmpVer(GAME_VERSION, remote.seenVersion) > 0) remote.seenVersion = GAME_VERSION;
+          const notesFrom = cmpVer(GAME_VERSION, remote.seenVersion) > 0 ? remote.seenVersion : null;
+          if (notesFrom) remote.seenVersion = GAME_VERSION;
           S = remote;
+          markDirty(); // the cloud gets the converted save with the next autosave
           const away = (Date.now() - S.savedAt) / 1000;
           renderAll();
+          if (notesFrom) queueSheet(() => openNotes(false, notesFrom));
           if (away > 5) offlineCatchup(away, away >= 60);
           toast('Spielstand aus der Cloud geladen');
         }
