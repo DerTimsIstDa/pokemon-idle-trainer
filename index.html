@@ -798,9 +798,11 @@ const BALANCE = {
     sell: { potion: 12, xatk: 30, dia: 120 },
   },
   // Diamond shop for the trainer: double trainer EP for an hour, or end the running search two hours earlier.
+  // Prices per progress region: bosses pay more diamonds later, so skipping search time stays 3 to 6 times
+  // as expensive as what the skipped hours would bring, in every region.
   trainerBoosts: {
-    ep: { price: 40, sec: 3600, mult: 2 },
-    time: { price: 30, sec: 7200 },
+    ep: { price: [40, 40, 45, 60, 80, 100], sec: 3600, mult: 2 },
+    time: { price: [30, 30, 35, 45, 60, 75], sec: 7200 },
   },
   trainer: {
     maxLevel: 100,
@@ -1459,7 +1461,11 @@ function keepFind(S) {
 }
 function findSellValue(W, S, found) {
   const V = BALANCE.search.sell, cps = cpsNow(W, S);
-  const sec = (found.potion || 0) * V.potion + (found.xatk || 0) * V.xatk + (found.dia || 0) * V.dia
+  // later regions find more diamonds (bosses pay more there), so one diamond sells for less playing time:
+  // a whole find stays worth the same minutes of income in every region
+  const boss = BOSSES[Math.max(0, Math.min(BOSSES.length - 1, progressRegion(W, S)))];
+  const diaSec = V.dia * BOSSES[0].dia / boss.dia;
+  const sec = (found.potion || 0) * V.potion + (found.xatk || 0) * V.xatk + (found.dia || 0) * diaSec
     + (found.tapBoost || 0) * BALANCE.boosts.tap.price * V.dia + (found.autoTap || 0) * BALANCE.boosts.auto.price * V.dia;
   return Math.max(1, sec * cps);
 }
@@ -1470,11 +1476,16 @@ function sellFind(W, S) {
   S.searchResult = null;
   return coins;
 }
-// Trainer boosts from the diamond shop. Both go into the bag first.
-function buyTrainerBoost(S, k) {
-  const B = BALANCE.trainerBoosts[k], inv = k === 'ep' ? 'trainerEp' : 'searchTime';
-  if (!B || S.dia < B.price) return false;
-  S.dia -= B.price; S.inv[inv] = (S.inv[inv] || 0) + 1;
+// Trainer boosts from the diamond shop. Both go into the bag first. The price depends on the progress region.
+function trainerBoostPrice(W, S, k) {
+  const p = BALANCE.trainerBoosts[k].price;
+  return p[Math.max(0, Math.min(p.length - 1, progressRegion(W, S)))];
+}
+function buyTrainerBoost(W, S, k) {
+  if (!BALANCE.trainerBoosts[k]) return false;
+  const price = trainerBoostPrice(W, S, k), inv = k === 'ep' ? 'trainerEp' : 'searchTime';
+  if (S.dia < price) return false;
+  S.dia -= price; S.inv[inv] = (S.inv[inv] || 0) + 1;
   return true;
 }
 // EP boost: one hour of double trainer EP; a second one adds another hour.
@@ -2075,7 +2086,7 @@ const Music = (function () {
       parts: [
         ['Neu', [
           '<b>Trainer auf der Suche:</b> Schick einen Trainer 4, 8 oder 12 Stunden los. Er bringt Supertränke, X-Angriffe, Diamanten und mit etwas Glück Boosts mit, je länger die Suche, desto mehr. Solange er unterwegs ist, ruhen seine Boni und er bekommt keine EP. In der Zeit kannst du einen anderen Trainer wählen. Brichst du ab, ist alles Gefundene weg. Den Fund behältst du ganz oder verkaufst ihn komplett gegen Coins.',
-          '<b>Trainer-Boosts im Shop:</b> Der EP-Boost gibt deinem Trainer eine Stunde lang doppelte EP, der Zeit-Boost macht eine laufende Suche zwei Stunden kürzer. Beide kosten Diamanten und sind bewusst teuer.',
+          '<b>Trainer-Boosts im Shop:</b> Der EP-Boost gibt deinem Trainer eine Stunde lang doppelte EP, der Zeit-Boost macht eine laufende Suche zwei Stunden kürzer. Beide kosten Diamanten und sind bewusst teuer, der Preis steigt mit der Region.',
           '<b>Drei Boss-Teams:</b> Vor dem Bosskampf wechselst du zwischen Team 1, 2 und 3, je nachdem, gegen welchen Boss es geht. Dein bisheriges Team ist jetzt Team 1.',
           '<b>Musik:</b> Ruhige Musik im Training, Kampfmusik in Arena und Bosskampf und Siegestöne nach einem Bosssieg. Beim Tippen bleibt es still. Ein- und ausschalten unter Menü, Einstellungen.',
         ]],
@@ -3037,15 +3048,15 @@ const Music = (function () {
     updateShopButtons();
   }
   const TBOOSTS = {
-    ep: { name: 'EP-Boost für Trainer', inv: 'trainerEp', col: '#ffcb45', desc: () => `${BALANCE.trainerBoosts.ep.sec / 3600} Stunde lang ×${BALANCE.trainerBoosts.ep.mult} Trainer-EP für deinen aktiven Trainer.`, ico: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/><path d="M18 3v4M16 5h4"/>' },
-    time: { name: 'Zeit-Boost für die Suche', inv: 'searchTime', col: '#63d5ff', desc: () => `Die laufende Suche eines Trainers endet ${BALANCE.trainerBoosts.time.sec / 3600} Stunden früher.`, ico: '<circle cx="12" cy="13" r="8"/><path d="M12 9v4l3 2M9 2h6"/>' },
+    ep: { name: 'EP-Boost für Trainer', inv: 'trainerEp', col: '#ffcb45', desc: () => `${BALANCE.trainerBoosts.ep.sec / 3600} Stunde lang ×${BALANCE.trainerBoosts.ep.mult} Trainer-EP für deinen aktiven Trainer. Der Preis steigt mit der Region.`, ico: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/><path d="M18 3v4M16 5h4"/>' },
+    time: { name: 'Zeit-Boost für die Suche', inv: 'searchTime', col: '#63d5ff', desc: () => `Die laufende Suche eines Trainers endet ${BALANCE.trainerBoosts.time.sec / 3600} Stunden früher. Der Preis steigt mit der Region.`, ico: '<circle cx="12" cy="13" r="8"/><path d="M12 9v4l3 2M9 2h6"/>' },
   };
   function trainerBoostRow(k) {
     const it = TBOOSTS[k];
     return `<div class="up" data-tboost="${k}" style="--c:${it.col}">
       <div class="up-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${it.ico}</svg></div>
       <div class="up-main"><div class="up-name">${esc(it.name)}</div><div class="up-bag" data-lv></div><div class="up-desc">${esc(it.desc())}</div></div>
-      <button class="buy dia" type="button" data-tboost-buy="${k}"><small>Kaufen</small><b>${fInt(BALANCE.trainerBoosts[k].price)} ${GEM}</b></button></div>`;
+      <button class="buy dia" type="button" data-tboost-buy="${k}"><small>Kaufen</small><b data-p="${trainerBoostPrice(W, S, k)}">${fInt(trainerBoostPrice(W, S, k))} ${GEM}</b></button></div>`;
   }
   // Diamond purchases ask first when the diamonds for the next region would no longer be enough.
   function confirmDiaSpend(name, price, buy) {
@@ -3061,8 +3072,8 @@ const Music = (function () {
   }
   function tryBuyTrainerBoost(k) {
     const it = TBOOSTS[k];
-    confirmDiaSpend(it.name, BALANCE.trainerBoosts[k].price, () => {
-      if (!buyTrainerBoost(S, k)) return;
+    confirmDiaSpend(it.name, trainerBoostPrice(W, S, k), () => {
+      if (!buyTrainerBoost(W, S, k)) return;
       markDirty(); saveLocal(); vibe(10);
       toast(`${it.name} liegt im Beutel. Einsetzen kannst du ihn im Trainer-Bereich.`);
       renderDia(); if (tab === 'shop') renderShop();
@@ -3118,7 +3129,9 @@ const Music = (function () {
       const row = $(`[data-tboost="${k}"]`, v); if (!row) continue;
       const have = S.inv[TBOOSTS[k].inv] || 0;
       $('[data-lv]', row).textContent = have ? 'Im Beutel: ' + have : '';
-      $('[data-tboost-buy]', row).classList.toggle('poor', S.dia < BALANCE.trainerBoosts[k].price);
+      const pr = trainerBoostPrice(W, S, k), pb = $('[data-tboost-buy] b', row);
+      if (pb.dataset.p !== String(pr)) { pb.dataset.p = String(pr); pb.innerHTML = fInt(pr) + ' ' + GEM; }
+      $('[data-tboost-buy]', row).classList.toggle('poor', S.dia < pr);
     }
     for (const id of Object.keys(ITEMS)) {
       const row = $(`[data-item="${id}"]`, v); if (!row) continue;
