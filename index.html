@@ -1965,16 +1965,22 @@ function bossRecord(S, F) {
   }
 
   // ---------- toasts ----------
-  // Hints from the training wait while a fight runs (training, arena or boss) and come right after it.
+  // Hints from the training wait while a fight runs (training, arena or boss) and while an evolution
+  // is on screen or still waiting to be shown. After the fight the evolution comes first, then the hints.
+  const evoQueue = []; let evoShowing = false;
   const heldToasts = [];
   function toast(msg) {
-    if (BT) { if (!heldToasts.includes(msg)) heldToasts.push(msg); return; }
+    if (BT || evoShowing || evoQueue.length) { if (!heldToasts.includes(msg)) heldToasts.push(msg); return; }
     showToast(msg);
+  }
+  function flushToasts() {
+    if (BT || evoShowing || evoQueue.length || !heldToasts.length) return;
+    heldToasts.splice(0).slice(-3).forEach((m, i) => setTimeout(() => showToast(m), 250 + i * 900));
   }
   function releaseHeld() {
     if (BT) return;
-    heldToasts.splice(0).slice(-3).forEach((m, i) => setTimeout(() => showToast(m), 250 + i * 900));
-    drainSheets();
+    drainSheets(); // a held evolution comes first
+    flushToasts();
   }
   function showToast(msg) {
     const box = $('#toasts');
@@ -2302,7 +2308,6 @@ function bossRecord(S, F) {
   }
 
   // ---------- events from the rules ----------
-  const evoQueue = []; let evoShowing = false;
   function handleEvents(ev, quiet) {
     if (!ev || !ev.length) return;
     let lv = 0, structural = false, trainerUp = null, soloUp = false;
@@ -2324,7 +2329,7 @@ function bossRecord(S, F) {
   }
   function showEvo() {
     if (BT) { evoShowing = false; return; } // shown when the fight is over
-    const e = evoQueue.shift(); if (!e) { evoShowing = false; drainSheets(); return; }
+    const e = evoQueue.shift(); if (!e) { evoShowing = false; drainSheets(); flushToasts(); return; }
     evoShowing = true;
     const A = W.P[e.from - 1], B2 = W.P[e.to - 1];
     const ov = document.createElement('div');
@@ -2344,7 +2349,7 @@ function bossRecord(S, F) {
       vibe(40);
     };
     const t = setTimeout(finish, reduceMotion() ? 200 : 2700);
-    const close = () => { clearTimeout(t); ov.remove(); evoShowing = false; if (evoQueue.length) showEvo(); else drainSheets(); };
+    const close = () => { clearTimeout(t); ov.remove(); evoShowing = false; if (evoQueue.length) showEvo(); else { drainSheets(); flushToasts(); } };
     $('#ev-ok', ov).onclick = close;
     ov.addEventListener('click', ev2 => { if (ov.classList.contains('done') && ev2.target === ov) close(); });
   }
