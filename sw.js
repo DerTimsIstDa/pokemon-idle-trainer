@@ -1,5 +1,5 @@
 // Offline start for the home-screen app. Network first and revalidated, so updates arrive as soon as you are online.
-const CACHE = 'pkidle-v4';
+const CACHE = 'pkidle-v5';
 const CORE = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './apple-touch-icon.png'];
 // version.json is never cached, the update check must always see the published version
 

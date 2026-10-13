@@ -426,10 +426,23 @@ main { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; -webkit-ove
 .matchup .side b { display: block; font-size: 14px; overflow-wrap: anywhere; }
 .matchup .side small { color: var(--muted); font-family: var(--display); }
 .matchup .vs { font-family: var(--display); font-size: 22px; color: var(--fight); }
-.verdict { border-radius: 12px; padding: 10px 12px; font-weight: 700; font-size: 14px; margin: 10px 0 4px; }
-.verdict.ok { background: color-mix(in oklab, var(--good) 16%, var(--panel-2)); color: #bff3d1; }
-.verdict.mid { background: color-mix(in oklab, var(--warn) 16%, var(--panel-2)); color: #ffe6a6; }
-.verdict.hard { background: color-mix(in oklab, var(--bad) 18%, var(--panel-2)); color: #ffc4c2; }
+/* difficulty: the colour always means "without items" (green easy, yellow medium, red hard) */
+.verdict { --vc: var(--line); border-radius: 12px; padding: 10px 12px 10px 13px; font-weight: 700; font-size: 14px; margin: 10px 0 4px; border-left: 6px solid var(--vc); background: color-mix(in oklab, var(--vc) 20%, var(--panel-2)); color: var(--text); }
+.verdict.ok { --vc: var(--good); color: #c9f7da; }
+.verdict.mid { --vc: var(--warn); color: #ffeab4; }
+.verdict.hard { --vc: var(--bad); color: #ffd0ce; }
+.verdict .vl { display: inline-block; margin-right: 6px; padding: 1px 8px; border-radius: 6px; background: var(--vc); color: #10131f; font-size: 12px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; vertical-align: 1px; }
+.verdict .vi { display: flex; align-items: flex-start; gap: 8px; margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(255, 255, 255, .12); color: var(--text); font-size: 13px; font-weight: 600; }
+.vdot { flex: none; width: 11px; height: 11px; margin-top: 4px; border-radius: 50%; box-shadow: 0 0 0 2px rgba(0, 0, 0, .25); }
+.vdot.ok { background: var(--good); }
+.vdot.mid { background: var(--warn); }
+.vdot.hard { background: var(--bad); }
+.verdict .vt { display: block; margin-top: 6px; color: var(--muted); font-size: 13px; font-weight: 600; }
+.diff { display: inline-block; padding: 2px 8px; border-radius: 6px; color: #10131f; font-size: 11px; font-weight: 800; letter-spacing: .03em; white-space: nowrap; }
+.diff.ok { background: var(--good); }
+.diff.mid { background: var(--warn); }
+.diff.hard { background: var(--bad); }
+.gym .gs .diff { margin-top: 3px; }
 .itemrow { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center; background: var(--panel-2); border-radius: 12px; padding: 6px 6px 6px 12px; margin-top: 8px; font-size: 13.5px; }
 .itemrow b { font-family: var(--display); font-weight: 500; }
 .teamrow { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 4px; }
@@ -726,9 +739,11 @@ const BALANCE = {
     // coins = income/s * (baseSec + perGymSec * gym number) * factor
     // first win: firstWinMult; rematch: factor = (leader level / your level)^factorExp, at least minFactor
     reward: { baseSec: 45, perGymSec: 8, firstWinMult: 3, factorExp: 2, minFactor: 0.1 },
-    // EP for the Pokémon in the separate training after a win: this many levels' worth at the leader's level,
-    // times (leader level / your level)^factorExp, at least minFactor, so stronger leaders give more
-    soloEp: { levels: 2, factorExp: 2, minFactor: 0.1 },
+    // EP for the Pokémon in the separate training after a win, as a share of its current level:
+    // share * (leader level / your level)^factorExp, limited to minFactor..maxFactor.
+    // A leader as strong as your Pokémon gives half a level, at most 0.75 of a level, so a win
+    // can never skip several levels.
+    soloEp: { share: 0.5, factorExp: 2, minFactor: 0.1, maxFactor: 1.5 },
   },
   // Boss fights against legendary Pokémon. Only separately trained Pokémon from minLevel on may fight.
   bosses: {
@@ -744,6 +759,8 @@ const BALANCE = {
     reward: { firstWinMult: 2, perWin: 0.25 },                         // diamonds = dia * (1 + perWin * wins), first win x2
     lossCooldown: 15,
   },
+  // Difficulty shown before a fight, by taps per second needed: up to easy = green, up to medium = yellow, above = red.
+  difficulty: { easy: 2, medium: 4 },
   // Diamond shop: short boosts for the separate training.
   boosts: {
     tap: { price: 15, sec: 30, mult: 2 },             // EP per tap x mult
@@ -1333,13 +1350,18 @@ function gymReward(W, S, gi, wins) {
   return cpsNow(W, S) * (R.baseSec + R.perGymSec * gi) * factor * tBonus(S, 'gymCoins');
 }
 // EP for the Pokémon in the separate training after beating gym gi (wins = wins before this one).
+// Always a share of the Pokémon's current level, so a win is noticeable but never skips levels.
 function gymSoloEp(W, S, gi, wins) {
   const E = BALANCE.gyms.soloEp, id = S.solo.sel;
   if (!id) return 0;
+  const L = soloLevel(S, id);
+  if (L >= BALANCE.solo.maxLevel) return 0;
   const ace = Math.max(...gymTeam(gi, wins).map(m => m.lvl));
-  const factor = Math.max(E.minFactor, Math.min(1, Math.pow(ace / soloLevel(S, id), E.factorExp)));
-  return soloNeed(Math.max(1, ace)) * E.levels * factor;
+  const factor = Math.max(E.minFactor, Math.min(E.maxFactor, Math.pow(ace / L, E.factorExp)));
+  return soloNeed(L) * E.share * factor;
 }
+// Difficulty class for a number of taps per second: 'ok' (easy), 'mid', 'hard'.
+function diffClass(taps) { const D = BALANCE.difficulty; return taps <= D.easy ? 'ok' : taps <= D.medium ? 'mid' : 'hard'; }
 function gymWin(W, S, gi, events = []) {
   const g = GYMS[gi], wins = gymWins(S, gi);
   const reward = gymReward(W, S, gi, wins);
@@ -1546,8 +1568,24 @@ function bossRecord(S, F) {
 /* Pokémon Idle-Trainer: page logic. Uses the core rules (BALANCE, GYMS, TRAINERS, ctx, addXP, ...) and DATA/TABLES. */
 (function () {
   // ---------- version and patch notes ----------
-  const GAME_VERSION = '1.2.0';
+  const GAME_VERSION = '1.3.0';
   const PATCH_NOTES = [
+    {
+      v: '1.3.0', date: '13.10.2026', title: 'Patch 3.0: Fehlerbehebung und Balance-Check',
+      parts: [
+        ['Behoben', [
+          '<b>Schwierigkeit auf einen Blick:</b> Die Einschätzung vor jedem Kampf ist jetzt immer passend gefärbt: grün einfach, gelb mittel, rot schwer. Die Farbe zeigt, wie schwer der Gegner ohne Items ist. Was Supertrank und X-Angriff ändern, steht darunter mit eigenem Farbpunkt. Arenaleiter und Bosse zeigen die Einstufung auch direkt in der Liste.',
+          '<b>Keine Unterbrechung im Kampf:</b> Entwicklungen und andere Hinweise aus dem Training erscheinen erst nach dem Kampf.',
+          '<b>AFK-Bonus:</b> Nach der Rückkehr in die App wurde der Bonus manchmal doppelt angezeigt und auch doppelt gutgeschrieben. Jetzt zählt jede Abwesenheit genau einmal, und das Fenster erscheint nur einmal.',
+        ]],
+        ['Balance', [
+          '<b>Arena-EP:</b> Ein Arenasieg bringt deinem Pokémon im Einzeltraining jetzt einen Teil seines aktuellen Levels: bei einem gleich starken Arenaleiter ein halbes Level, höchstens drei Viertel. Mehrere Level auf einmal gibt es nicht mehr.',
+        ]],
+        ['Dein Spielstand', [
+          'Dein Fortschritt bleibt vollständig erhalten. Vor dem Update wurde wieder eine Sicherung angelegt (Menü, Spielstand).',
+        ]],
+      ],
+    },
     {
       v: '1.2.0', date: '12.10.2026', title: 'Patch 2: Neue Regionen, Bosse und Diamanten',
       parts: [
@@ -1827,10 +1865,10 @@ function bossRecord(S, F) {
     S.rev = (S.rev || 0) + 1; S.savedAt = Date.now(); S.gv = GAME_VERSION;
     try { localStorage.setItem(SAVE_KEY, JSON.stringify(S)); } catch (e) { /* storage unavailable: progress lives for this visit only */ }
   }
-  // A save of an older format is copied to BACKUP_KEY on this device before it gets converted.
+  // A save from an older format or an older game version is copied to BACKUP_KEY on this device first.
   function backupOld(raw, obj) {
     const from = typeof obj.v === 'number' && obj.v >= 1 ? obj.v : 1;
-    if (from >= SAVE_VERSION) return 0;
+    if (from >= SAVE_VERSION && !(typeof obj.gv === 'string' && cmpVer(GAME_VERSION, obj.gv) > 0)) return 0;
     try {
       const prev = JSON.parse(localStorage.getItem(BACKUP_KEY) || 'null');
       if (!prev || prev.raw !== raw) localStorage.setItem(BACKUP_KEY, JSON.stringify({ at: Date.now(), from, version: obj.gv || '1.0.0', raw }));
@@ -1880,6 +1918,7 @@ function bossRecord(S, F) {
           backupOld(d.json, obj);
           sheetQueue.length = 0; // pending sheets belong to the replaced state
           closeSheet(true); closeBattle(true);
+          welcome = null;
           const notesFrom = cmpVer(GAME_VERSION, remote.seenVersion) > 0 ? remote.seenVersion : null;
           if (notesFrom) remote.seenVersion = GAME_VERSION;
           S = remote;
@@ -1892,6 +1931,7 @@ function bossRecord(S, F) {
         }
       } else { markDirty(); }
     } catch (e) { cloud.ref = null; }
+    finally { releaseWelcome(); }
   }
 
   // ---------- derived ----------
@@ -1925,13 +1965,25 @@ function bossRecord(S, F) {
   }
 
   // ---------- toasts ----------
+  // Hints from the training wait while a fight runs (training, arena or boss) and come right after it.
+  const heldToasts = [];
   function toast(msg) {
+    if (BT) { if (!heldToasts.includes(msg)) heldToasts.push(msg); return; }
+    showToast(msg);
+  }
+  function releaseHeld() {
+    if (BT) return;
+    heldToasts.splice(0).slice(-3).forEach((m, i) => setTimeout(() => showToast(m), 250 + i * 900));
+    drainSheets();
+  }
+  function showToast(msg) {
     const box = $('#toasts');
     while (box.children.length > 2) box.firstElementChild.remove();
     const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg;
     box.appendChild(t); setTimeout(() => t.remove(), 2900);
   }
   function vibe(ms) { if (S.settings.vibe && navigator.vibrate) { try { navigator.vibrate(ms); } catch (e) { /* not allowed here */ } } }
+  function vibeMain(ms) { if (!BT) vibe(ms); }
 
   // ---------- sheets ----------
   let pressActive = false;
@@ -1968,8 +2020,9 @@ function bossRecord(S, F) {
   }
   function queueSheet(fn) { sheetQueue.push(fn); drainSheets(); }
   function drainSheets() {
-    if (curSheet || evoShowing || BT || !sheetQueue.length) return;
-    sheetQueue.shift()();
+    if (curSheet || evoShowing || BT) return;
+    if (evoQueue.length) { showEvo(); return; } // evolutions held back during a fight come first
+    if (sheetQueue.length) sheetQueue.shift()();
   }
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && curSheet && curSheet.dismissible) closeSheet(); });
 
@@ -2257,7 +2310,7 @@ function bossRecord(S, F) {
       if (e.e === 'level') lv++;
       else if (e.e === 'evolve') { structural = true; markDirty(); if (!quiet) evoQueue.push(e); }
       else if (e.e === 'stone') { structural = true; if (!quiet) toast(`${ctx(W, S).sp.name} ist bereit. Jetzt fehlt nur noch der Stein.`); }
-      else if (e.e === 'ready') { structural = true; markDirty(); if (!quiet) { toast('Kampf bereit!'); vibe(30); } }
+      else if (e.e === 'ready') { structural = true; markDirty(); if (!quiet) { toast('Kampf bereit!'); vibeMain(30); } }
       else if (e.e === 'trainerLevel') { trainerUp = e; markDirty(); }
       else if (e.e === 'soloLevel') soloUp = true;
       else if (e.e === 'shiny') { markDirty(); saveLocal(); showShiny(e); }
@@ -2267,9 +2320,10 @@ function bossRecord(S, F) {
     if (trainerUp && !quiet) toast(`${TRAINER_BY_ID[trainerUp.id].name} ist jetzt Trainer-Level ${trainerUp.lvl}`);
     if (trainerUp && tab === 'trainer') renderTrainer();
     if (structural) { renderHeader(); if (tab === 'train') renderTrain(); }
-    if (!quiet && evoQueue.length && !evoShowing) showEvo();
+    if (!quiet && evoQueue.length && !evoShowing && !BT) showEvo();
   }
   function showEvo() {
+    if (BT) { evoShowing = false; return; } // shown when the fight is over
     const e = evoQueue.shift(); if (!e) { evoShowing = false; drainSheets(); return; }
     evoShowing = true;
     const A = W.P[e.from - 1], B2 = W.P[e.to - 1];
@@ -2648,24 +2702,33 @@ function bossRecord(S, F) {
     return { type: best, raw: bv, names: MOVES[W.TI[best]] || MOVES.normal };
   }
   function effText(raw) { return raw >= 2 ? 'Sehr effektiv!' : raw < 1 ? 'Nicht sehr effektiv …' : ''; }
-  // Verdict before a fight: t0 without items, tp with Supertränke, tx with both (taps per second needed).
-  // The colour follows the best case, the text names all three.
-  function verdictText(t0, tp, tx, potions, hasX, hardTip) {
-    const f = v => nf1.format(Math.ceil(v * 10) / 10);
-    const best = Math.min(t0, tp, tx);
-    if (!isFinite(best)) return { cls: 'hard', txt: 'Aussichtslos. ' + hardTip };
-    let txt;
-    if (t0 < 0.3) txt = 'Leichter Kampf. Dein Pokémon schafft das fast allein.';
-    else if (t0 <= 2.2) txt = `Machbar: Tippe etwa ${f(t0)}-mal pro Sekunde.`;
-    else if (t0 <= 3.8) txt = `Fordernd: etwa ${f(t0)} Tipps pro Sekunde nötig.`;
-    else txt = isFinite(t0) ? `Sehr schwer: etwa ${f(t0)} Tipps pro Sekunde nötig.` : 'Ohne Items kaum zu schaffen.';
-    const parts = [txt];
-    const pw = potions === 1 ? '1 Supertrank' : potions + ' Supertränken';
-    if (potions > 0 && tp < t0 - 0.05) parts.push(tp < 0.3 ? `Mit ${pw} schafft dein Pokémon es fast allein.` : `Mit ${pw}: etwa ${f(tp)} Tipps pro Sekunde.`);
-    if (hasX && tx < Math.min(t0, tp) - 0.05) parts.push(tx < 0.3 ? 'Mit X-Angriff dazu fast von allein.' : `Mit X-Angriff dazu: etwa ${f(tx)} Tipps pro Sekunde.`);
-    if (best > 3.8) parts.push(hardTip);
-    return { cls: best <= 2.2 ? 'ok' : best <= 3.8 ? 'mid' : 'hard', txt: parts.join(' ') };
+  // ---------- difficulty before a fight ----------
+  // The colour always shows how hard the opponent is without items: green easy, yellow medium, red hard.
+  // What Supertrank and X-Angriff change gets its own line with its own colour dot.
+  const DIFF_LABEL = { ok: 'Einfach', mid: 'Mittel', hard: 'Schwer' };
+  const fTaps = v => nf1.format(Math.ceil(v * 10) / 10);
+  function diffChip(t) { const c = diffClass(t); return `<span class="diff ${c}">${DIFF_LABEL[c]}</span>`; }
+  function itemsPhrase(p, x, boss) {
+    const pp = p === 1 ? '1 Supertrank' : p + ' Supertränken';
+    const xx = boss ? (x === 1 ? '1 X-Angriff' : x + ' X-Angriffen') : 'X-Angriff';
+    return p > 0 && x > 0 ? pp + ' und ' + xx : p > 0 ? pp : x > 0 ? xx : null;
   }
+  // t0: taps per second needed without items, ti: with the items in the bag (Infinity = not possible).
+  // Nobody taps much faster than 12 times a second, so higher values are not shown as a number.
+  const TAPS_MAX = 12;
+  function verdictInfo(t0, ti, items, hardTip, itemNote, who = 'Dein Pokémon') {
+    const cls = diffClass(t0);
+    const main = !(t0 <= TAPS_MAX) ? `Mehr als ${TAPS_MAX} Tipps pro Sekunde nötig, so kaum zu schaffen` : t0 < 0.3 ? `${who} schafft das fast allein` : `Etwa ${fTaps(t0)} Tipps pro Sekunde nötig`;
+    let html = `<span class="vl">${DIFF_LABEL[cls]}</span> ${esc(main)}.`;
+    if (items && (ti < t0 - 0.05 || !(t0 <= TAPS_MAX))) {
+      const ci = diffClass(ti);
+      const res = !(ti <= TAPS_MAX) ? `immer noch mehr als ${TAPS_MAX} Tipps pro Sekunde` : ti < 0.3 ? 'fast von allein' : `etwa ${fTaps(ti)} Tipps pro Sekunde`;
+      html += `<span class="vi"><i class="vdot ${ci}" aria-hidden="true"></i><span>Mit ${esc(items)}: ${res}, also ${DIFF_LABEL[ci].toLowerCase()}.${itemNote ? ' ' + esc(itemNote) : ''}</span></span>`;
+    }
+    if (!(Math.min(t0, ti) <= BALANCE.difficulty.medium)) html += `<span class="vt">${esc(hardTip)}</span>`;
+    return { cls, html };
+  }
+  function showVerdict(box, v) { box.className = 'verdict ' + v.cls; box.innerHTML = v.html; }
   function needTaps(st, potions, x) {
     const ttd = st.maxHp * (1 + BALANCE.items.potion.heal * potions) / (st.eHit / K.enemyInterval);
     const need = st.eHp / ttd;
@@ -2673,8 +2736,8 @@ function bossRecord(S, F) {
     return Math.max(0, (need - auto) / per);
   }
   function mainVerdict(st) {
-    const x = S.inv.xatk > 0 ? BALANCE.items.xatk.mult : 1;
-    return verdictText(needTaps(st, 0, 1), needTaps(st, S.inv.potion, 1), needTaps(st, S.inv.potion, x), S.inv.potion, x > 1,
+    const p = S.inv.potion, x = S.inv.xatk > 0 ? 1 : 0;
+    return verdictInfo(needTaps(st, 0, 1), needTaps(st, p, x ? BALANCE.items.xatk.mult : 1), itemsPhrase(p, x, false),
       'Trainiere weiter oder rüste im Shop auf.');
   }
   function itemRowsHTML(prefix) {
@@ -2718,7 +2781,7 @@ function bossRecord(S, F) {
       ${itemRowsHTML('pb')}
       <p class="fine" style="margin-top:10px">Tippe im Kampf auf das Feld, um anzugreifen. Alle ${K.specialEvery} Tipps folgt ${esc(pm.names[1])}.</p>
       <div class="row"><button class="btn ghost" id="pb-no" type="button">Noch trainieren</button><button class="btn fight" id="pb-go" type="button" style="animation:none">Kampf starten</button></div>`);
-    wireItemRows(el, 'pb', () => { const v = mainVerdict(st); const box = $('#pb-verdict', el); box.className = 'verdict ' + v.cls; box.textContent = v.txt; });
+    wireItemRows(el, 'pb', () => showVerdict($('#pb-verdict', el), mainVerdict(st)));
     $('#pb-no', el).onclick = () => closeSheet();
     $('#pb-go', el).onclick = () => { closeSheet(true); startMainBattle(); };
   }
@@ -3003,7 +3066,7 @@ function bossRecord(S, F) {
     box.hidden = true; box.innerHTML = '';
     BT = null;
     if (!silent) { actionKey = ''; renderAll(); }
-    setTimeout(drainSheets, 0);
+    setTimeout(releaseHeld, 0);
   }
 
   // ---------- arena: separate leveling, gyms, badges ----------
@@ -3194,10 +3257,12 @@ function bossRecord(S, F) {
     const k = gi - gymFirstIndex(g.r) + 1;
     let side;
     if (!open) side = `<b>Gesperrt</b><small>${k === 1 ? 'Ab ' + esc(W.R[g.r][0]) : 'Erst ' + esc(GYMS[gi - 1].leader) + ' besiegen'}</small>`;
+    else if (S.solo.sel) side = `<b>Lv. ${ace}</b>${diffChip(gymTapsNeeded(gymSetup(W, S, gi), 0, 1))}`;
     else side = `<b>Lv. ${ace}</b><small class="${wins ? '' : 'go'}">${wins ? wins + '× besiegt' : 'Neu'}</small>`;
+    const winsNote = open && S.solo.sel && wins ? ' · ' + wins + '×' : '';
     return `<button class="gym ${open ? '' : 'locked'} ${wins ? 'won' : ''}" type="button" data-gym="${gi}" ${open ? '' : 'disabled'} aria-label="${esc(g.leader)}, ${esc(g.badge)}${open ? '' : ', gesperrt'}">
       <span class="medal ${open ? '' : 'off'}" style="--c:${TYPE_COL[g.type]}">${open ? `<span>${k}</span>` : LOCK_SVG}</span>
-      <span class="gm"><b>${esc(g.leader)}</b><small>${esc(g.badge)} · ${esc(typeNames(gymTypes(g)))}</small></span>
+      <span class="gm"><b>${esc(g.leader)}</b><small>${esc(g.badge)} · ${esc(typeNames(gymTypes(g)))}${winsNote}</small></span>
       <span class="gs">${side}</span></button>`;
   }
   function badgesHTML() {
@@ -3213,8 +3278,8 @@ function bossRecord(S, F) {
     return out + `<p class="fine" style="margin-top:12px">Besiegte Arenaleiter: ${b.distinct} von ${GYMS.length} · Orden insgesamt: ${b.total}. Jeder Orden macht dein Einzeltraining schneller, jeder Sieg bringt deinem Pokémon dort zusätzliche EP.</p>`;
   }
   function gymVerdict(G) {
-    const x = S.inv.xatk > 0 ? BALANCE.items.xatk.mult : 1;
-    return verdictText(gymTapsNeeded(G, 0, 1), gymTapsNeeded(G, S.inv.potion, 1), gymTapsNeeded(G, S.inv.potion, x), S.inv.potion, x > 1,
+    const p = S.inv.potion, x = S.inv.xatk > 0 ? 1 : 0;
+    return verdictInfo(gymTapsNeeded(G, 0, 1), gymTapsNeeded(G, p, x ? BALANCE.items.xatk.mult : 1), itemsPhrase(p, x, false),
       'Level dein Pokémon im Einzeltraining weiter oder wähle eins mit Typvorteil.');
   }
   function openPreGym(gi) {
@@ -3240,7 +3305,7 @@ function bossRecord(S, F) {
       ${itemRowsHTML('pg')}
       <p class="fine" style="margin-top:10px">Du kämpfst allein gegen das ganze Team. Deine KP bleiben zwischen den Pokémon, wie sie sind.</p>
       <div class="row"><button class="btn ghost" id="pg-no" type="button">Weiter trainieren</button><button class="btn fight" id="pg-go" type="button" style="animation:none">Kampf starten</button></div>`);
-    wireItemRows(el, 'pg', () => { const v = gymVerdict(G); const box = $('#pg-verdict', el); box.className = 'verdict ' + v.cls; box.textContent = v.txt; });
+    wireItemRows(el, 'pg', () => showVerdict($('#pg-verdict', el), gymVerdict(G)));
     const go = $('#pg-go', el);
     const tick = () => {
       if (!go.isConnected) return;
@@ -3282,10 +3347,13 @@ function bossRecord(S, F) {
     const B = BALANCE.bosses, elig = bossEligible(S);
     let best = null;
     for (const k in S.solo.lv) { const L = soloLevel(S, +k); if (S.reg[k] && (!best || L > best.L)) best = { id: +k, L }; }
+    let team = (S.bossTeam || []).filter(id => elig.includes(id));
+    if (!team.length && elig.length) team = [elig.includes(S.solo.sel) ? S.solo.sel : elig[0]];
     const rows = BOSSES.map((b, bi) => {
       const open = bossUnlocked(W, S, bi), wins = bossWins(S, bi), sp = W.P[b.mon - 1];
+      const chip = open && team.length ? diffChip(bossTapsNeeded(bossSetup(W, S, bi, team), { potion: 0, xatk: 0 }, false)) : '';
       const side = open
-        ? `<b>Lv. ${bossLevel(bi, wins)}</b><small class="dia-t">+${fInt(bossReward(bi, wins))} ${GEM}</small>`
+        ? `<b>Lv. ${bossLevel(bi, wins)}</b><small class="dia-t">+${fInt(bossReward(bi, wins))} ${GEM}</small>${chip}`
         : `<b>Gesperrt</b><small>Ab ${esc(W.R[b.r][0])}</small>`;
       return `<button class="gym boss ${open ? '' : 'locked'} ${wins ? 'won' : ''}" type="button" data-boss="${bi}" ${open ? '' : 'disabled'} aria-label="${esc(sp.name)}${open ? '' : ', gesperrt'}">
         <span class="bossimg">${open ? monHTML(b.mon, 52, { emb: 0.82 }) : LOCK_SVG}</span>
@@ -3355,14 +3423,14 @@ function bossRecord(S, F) {
     const save = () => { S.bossTeam = team.slice(); markDirty(); };
     const verdict = () => {
       const box = $('#bb-verdict', el);
-      if (!team.length) { box.className = 'verdict hard'; box.textContent = elig.length ? 'Wähle mindestens ein Pokémon für dein Team.' : `Dir fehlt ein Pokémon ab Lv. ${B.minLevel}.`; go.disabled = true; return; }
+      if (!team.length) { box.className = 'verdict'; box.textContent = elig.length ? 'Wähle mindestens ein Pokémon für dein Team.' : `Dir fehlt ein Pokémon ab Lv. ${B.minLevel}.`; go.disabled = true; return; }
       const G = bossSetup(W, S, bi, team);
       const pots = Math.min(B.potionsPerFight, S.inv.potion), xs = Math.min(B.xatkPerFight, S.inv.xatk);
       const t0 = bossTapsNeeded(G, { potion: 0, xatk: 0 }, false);
-      const tp = bossTapsNeeded(G, { potion: pots, xatk: 0 }, true);
-      const tx = bossTapsNeeded(G, { potion: pots, xatk: xs }, true);
-      const v = verdictText(t0, tp, tx, pots, xs > 0, 'Level dein Team im Einzeltraining weiter, nimm Pokémon mit Typvorteil mit oder kauf Supertränke und X-Angriffe.');
-      box.className = 'verdict ' + v.cls; box.textContent = v.txt + ((pots || xs) && t0 > tx + 0.05 ? ' Die Werte mit Items gelten, wenn du sie im richtigen Moment einsetzt.' : '');
+      const ti = pots || xs ? bossTapsNeeded(G, { potion: pots, xatk: xs }, true) : t0;
+      showVerdict(box, verdictInfo(t0, ti, itemsPhrase(pots, xs, true),
+        'Level dein Team im Einzeltraining weiter, nimm Pokémon mit Typvorteil mit oder kauf Supertränke und X-Angriffe.',
+        'Gilt, wenn du sie im richtigen Moment einsetzt.', team.length > 1 ? 'Dein Team' : 'Dein Pokémon'));
       tick();
     };
     const tick = () => {
@@ -3985,7 +4053,40 @@ function bossRecord(S, F) {
   }
 
   // ---------- offline progress ----------
+  // "Willkommen zurück": one window per return. Returns while it is still waiting or open are merged into it.
+  let welcome = null, welcomeHold = false;
+  function addWelcome(w) {
+    if (welcome && welcome.open && !(welcome.el && welcome.el.isConnected)) welcome = null; // its window was replaced by another one
+    if (welcome) {
+      welcome.sec += w.sec; welcome.coins += w.coins; welcome.capped = welcome.capped || w.capped;
+      welcome.lv1 = w.lv1; welcome.evos.push(...w.evos); if (w.trainer) welcome.trainer = w.trainer;
+      welcome.note = w.note; welcome.gated = w.gated;
+      if (welcome.open) showWelcome();
+      return;
+    }
+    welcome = Object.assign({ open: false, queued: false }, w);
+    if (!welcomeHold) queueWelcome();
+  }
+  function queueWelcome() { if (welcome && !welcome.queued) { welcome.queued = true; queueSheet(showWelcome); } }
+  function releaseWelcome() { welcomeHold = false; queueWelcome(); }
+  function showWelcome() {
+    const w = welcome; if (!w) return;
+    w.open = true;
+    const lines = [`<span>Coins</span><b>+${fInt(w.coins)}</b>`];
+    if (!w.gated) {
+      lines.push(`<span>${esc(w.name0)}</span><b>Lv. ${w.lv0} → ${w.lv1}</b>`);
+      for (const [a, b] of w.evos) lines.push(`<span>Entwickelt</span><b>${esc(W.P[a - 1].name)} → ${esc(W.P[b - 1].name)}</b>`);
+      if (w.trainer) lines.push(`<span>Trainer ${esc(TRAINER_BY_ID[w.trainer.id].name)}</span><b>Lv. ${w.trainer.lvl}</b>`);
+    }
+    const who = w.gated ? 'Dein Pokédex-Team' : 'Die Pension', did = w.gated ? 'verdient' : 'trainiert';
+    const el = w.el = openSheet(`<h2>Willkommen zurück!</h2>
+      <p>Du warst ${fTime(w.sec)} weg. ${w.capped ? `${who} hat davon ${K.offlineCapH} Std. ${did}, mehr geht am Stück nicht.` : `${who} hat in der Zeit weiter ${did}.`}</p>
+      <div class="kv">${lines.join('')}</div>${w.note || ''}
+      <div class="row"><button class="btn gold" data-autofocus id="wb-ok" type="button">Weiter</button></div>`, { onClose: () => { welcome = null; } });
+    $('#wb-ok', el).onclick = () => closeSheet();
+  }
   function offlineCatchup(sec, showModal) {
+    const real = sec;
     sec = Math.min(sec, K.offlineCapH * 3600);
     if (!S || sec < 1 || pendingStarter() || S.done) return;
     const boost = tBonus(S, 'offline');
@@ -3994,15 +4095,7 @@ function bossRecord(S, F) {
       S.coins += coins; S.life += coins;
       S.stats.away = (S.stats.away || 0) + sec;
       markDirty();
-      if (!showModal) return;
-      queueSheet(() => {
-        const el = openSheet(`<h2>Willkommen zurück!</h2>
-          <p>Du warst ${fTime(sec)} weg. Dein Pokédex-Team hat in der Zeit weiter verdient.</p>
-          <div class="kv"><span>Coins</span><b>+${fInt(coins)}</b></div>
-          <p>${esc(W.R[gateRegion(W, S)][0])} wartet noch darauf, mit Diamanten freigeschaltet zu werden.</p>
-          <div class="row"><button class="btn gold" data-autofocus id="wb-ok" type="button">Weiter</button></div>`);
-        $('#wb-ok', el).onclick = () => closeSheet();
-      });
+      if (showModal) addWelcome({ sec: real, capped: real > sec, coins, gated: true, evos: [], note: `<p>${esc(W.R[gateRegion(W, S)][0])} wartet noch darauf, mit Diamanten freigeschaltet zu werden.</p>` });
       return;
     }
     const c = ctx(W, S);
@@ -4017,21 +4110,11 @@ function bossRecord(S, F) {
     if (!showModal) return;
     const evos = ev.filter(e => e.e === 'evolve');
     const tUp = ev.filter(e => e.e === 'trainerLevel').pop();
-    const lines = [`<span>Coins</span><b>+${fInt(coins + evos.reduce((a, e) => a + e.reward, 0))}</b>`];
-    lines.push(`<span>${esc(sp0.name)}</span><b>Lv. ${lv0} → ${S.lvl}</b>`);
-    for (const e of evos) lines.push(`<span>Entwickelt</span><b>${esc(W.P[e.from - 1].name)} → ${esc(W.P[e.to - 1].name)}</b>`);
-    if (tUp) lines.push(`<span>Trainer ${esc(TRAINER_BY_ID[tUp.id].name)}</span><b>Lv. ${tUp.lvl}</b>`);
     const now = ctx(W, S).sp;
     let note = '';
     if (S.ready) note = `<p>${esc(now.name)} ist bereit für den Kampf.</p>`;
     else if (S.stone) note = `<p>${esc(now.name)} wartet auf einen Entwicklungsstein.</p>`;
-    queueSheet(() => {
-      const el = openSheet(`<h2>Willkommen zurück!</h2>
-        <p>Du warst ${fTime(sec)} weg${sec >= K.offlineCapH * 3600 ? ' (die Pension trainiert maximal ' + K.offlineCapH + ' Std.)' : ''}. In der Zeit hat die Pension weiter trainiert.</p>
-        <div class="kv">${lines.join('')}</div>${note}
-        <div class="row"><button class="btn gold" data-autofocus id="wb-ok" type="button">Weiter</button></div>`);
-      $('#wb-ok', el).onclick = () => closeSheet();
-    });
+    addWelcome({ sec: real, capped: real > sec, coins: coins + evos.reduce((x, e) => x + e.reward, 0), gated: false, name0: sp0.name, lv0, lv1: S.lvl, evos: evos.map(e => [e.from, e.to]), trainer: tUp ? { id: tUp.id, lvl: tUp.lvl } : null, note });
   }
 
   // ---------- viewport guard (iOS keeps a shifted or shrunken viewport after the keyboard) ----------
@@ -4074,11 +4157,15 @@ function bossRecord(S, F) {
   }
 
   // ---------- main loop ----------
-  let last = performance.now(), uiT = 0, saveT = 0, cloudT = 0;
+  let last = performance.now(), lastWall = Date.now(), uiT = 0, saveT = 0, cloudT = 0;
   function frame(now) {
     let dt = (now - last) / 1000; last = now;
+    // Time away (app in the background, phone asleep) is the wall-clock gap between two frames.
+    // Each gap is seen by exactly one frame, so every absence is credited exactly once.
+    const wall = Date.now(), gap = (wall - lastWall) / 1000; lastWall = wall;
     if (S) {
-      if (dt > 3) { offlineCatchup(dt, dt >= 60); if (BT) BT.paused = false; dt = 0; }
+      if (gap > 3) { offlineCatchup(gap, gap >= 60); if (BT) BT.paused = false; dt = 0; }
+      else dt = clamp(dt, 0, 3);
       if (dt > 0) {
         if (!mainIdle()) {
           const c = ctx(W, S);
@@ -4105,7 +4192,7 @@ function bossRecord(S, F) {
   document.addEventListener('visibilitychange', () => {
     if (!S) return;
     if (document.hidden) { if (BT) BT.paused = true; saveLocal(); markDirty(); cloudWrite(); }
-    else { if (BT) BT.paused = false; last = performance.now() - Math.max(0, Date.now() - S.savedAt); }
+    else if (BT) BT.paused = false;
   });
   window.addEventListener('pagehide', () => { if (S) saveLocal(); });
 
@@ -4121,9 +4208,12 @@ function bossRecord(S, F) {
     const notesFrom = local && cmpVer(GAME_VERSION, S.seenVersion) > 0 ? S.seenVersion : null;
     renderAll();
     if (notesFrom) { S.seenVersion = GAME_VERSION; queueSheet(() => openNotes(false, notesFrom)); }
+    // inside claude.ai the cloud save may replace this state, so its welcome window waits for that check
+    welcomeHold = !!(window.claude && typeof window.claude.use === 'function');
+    if (welcomeHold) setTimeout(() => { if (welcomeHold) releaseWelcome(); }, 4000);
     if (away > 5) offlineCatchup(away, away >= 60 && !s);
     saveLocal();
-    last = performance.now();
+    last = performance.now(); lastWall = Date.now();
     requestAnimationFrame(frame);
     probeSprites();
     initCloud();
