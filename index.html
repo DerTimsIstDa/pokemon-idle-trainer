@@ -613,6 +613,112 @@ textarea { width: 100%; min-height: 84px; background: #0b0d1c; color: var(--text
 .help li b { color: var(--text); }
 .fine { font-size: 12px; color: var(--faint); }
 
+/* Patch 6: NG+ tiers, Pokécenter, knocked out Pokémon, filter in the picker, drag and drop for boss teams */
+svg.crown { width: 1.05em; height: 1.05em; color: var(--gold); vertical-align: -.14em; flex: none; }
+.stars { display: inline-flex; gap: 1px; font-size: 10px; line-height: 1; white-space: nowrap; }
+.stars i { font-style: normal; color: #3a4070; }
+.stars i.on { color: var(--gold); text-shadow: 0 0 4px rgba(255, 203, 69, .45); }
+.ngbox { margin: 12px 0 6px; background: var(--panel-2); border-radius: 14px; padding: 10px 12px 12px; box-shadow: inset 0 0 0 1px var(--line); }
+.ngtop { display: grid; grid-template-columns: var(--tap) 1fr var(--tap); align-items: center; gap: 8px; }
+.ngstep { width: var(--tap); height: var(--tap); border: 0; border-radius: 12px; background: var(--panel); box-shadow: inset 0 0 0 1px var(--line); color: var(--text); font-size: 26px; font-weight: 800; line-height: 1; cursor: pointer; display: grid; place-items: center; padding: 0 0 3px; touch-action: manipulation; }
+.ngstep:disabled { opacity: .3; cursor: default; }
+.ngcur { text-align: center; min-width: 0; }
+.ngcur b { display: flex; align-items: center; justify-content: center; gap: 6px; font-family: var(--display); font-weight: 600; font-size: 22px; line-height: 1.15; color: var(--gold); }
+.ngcur small { display: block; font-size: 12.5px; color: var(--muted); }
+.ngbar { height: 6px; border-radius: 3px; background: #0b0d1c; margin: 10px 0 8px; overflow: hidden; }
+.ngbar i { display: block; height: 100%; background: linear-gradient(90deg, color-mix(in oklab, var(--gold) 70%, #fff), var(--gold)); border-radius: inherit; }
+.ngmeta { display: flex; align-items: center; justify-content: space-between; gap: 6px 10px; flex-wrap: wrap; font-size: 12px; color: var(--muted); }
+.ngrec { margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(255, 255, 255, .08); font-size: 13px; color: var(--muted); line-height: 1.55; }
+.rec { font-weight: 800; white-space: nowrap; }
+.rec.ok { color: var(--good); }
+.rec.mid { color: var(--warn); }
+.diffdot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; background: var(--line); }
+.diffdot.ok { background: var(--good); }
+.diffdot.mid { background: var(--warn); }
+.diffdot.hard { background: var(--bad); }
+.ngbox .ngup { margin-top: 10px; width: 100%; }
+.sheet .ngred { margin: 8px 0 0; }
+.sheet .ngwin { margin: 0 0 10px; padding: 9px 12px; border-radius: 12px; background: color-mix(in oklab, var(--gold) 13%, var(--panel-2)); box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--gold) 40%, var(--line)); color: var(--text); font-size: 14px; }
+.sheet .ngwin.master { background: color-mix(in oklab, var(--gold) 24%, var(--panel-2)); }
+.gym.master { box-shadow: inset 0 0 0 1.5px color-mix(in oklab, var(--gold) 70%, var(--line)); background: color-mix(in oklab, var(--gold) 6%, var(--panel)); }
+.gym .gm small svg.crown { width: 13px; height: 13px; vertical-align: -2px; }
+.nw { white-space: nowrap; }
+.bdg { position: relative; }
+.bdg .stars { display: grid; grid-template-columns: repeat(5, auto); gap: 1px 2px; font-size: 9.5px; }
+.bdg small { font-size: 11.5px; }
+.bdg.master { box-shadow: inset 0 0 0 1.5px color-mix(in oklab, var(--gold) 75%, var(--line)), 0 0 14px rgba(255, 203, 69, .14); background: color-mix(in oklab, var(--gold) 9%, var(--panel)); }
+.bcrown { position: absolute; top: 5px; right: 6px; line-height: 0; }
+.bcrown svg.crown { width: 17px; height: 17px; filter: drop-shadow(0 1px 1px rgba(0, 0, 0, .6)); }
+.bdg.boss .bossimg { width: 52px; height: 52px; border-radius: 12px; }
+.bdg.boss.off .bossimg { background: var(--panel-2); }
+/* Pokécenter and healing */
+.card.pcenter { margin-top: 12px; background: color-mix(in oklab, #f05a8a 7%, var(--panel)); box-shadow: inset 0 0 0 1px color-mix(in oklab, #f05a8a 42%, var(--line)); }
+.pc-head { display: flex; align-items: baseline; justify-content: space-between; gap: 4px 10px; flex-wrap: wrap; }
+.pc-head h3 { margin: 0; }
+.pc-head small { font-size: 12px; color: var(--muted); }
+.pc-list { display: grid; gap: 6px; margin-top: 8px; }
+.pc-row { display: grid; grid-template-columns: 44px 1fr auto; gap: 10px; align-items: center; width: 100%; min-height: 52px; border: 0; border-radius: 12px; padding: 4px 12px 4px 4px; background: var(--panel-2); box-shadow: inset 0 0 0 1px var(--line); color: var(--text); text-align: left; cursor: pointer; }
+.pc-row > * { pointer-events: none; }
+.pc-mon { width: 44px; height: 44px; display: grid; place-items: center; filter: grayscale(.85) brightness(.85); }
+.pc-txt { min-width: 0; }
+.pc-txt b { display: block; font-size: 14px; }
+.pc-txt small { display: block; font-size: 12px; color: var(--muted); }
+.pc-go { font-size: 12.5px; font-weight: 800; color: #ff8fb1; }
+.kohead { display: grid; grid-template-columns: 84px 1fr; gap: 12px; align-items: center; margin: 6px 0 4px; }
+.kh-mon { width: 84px; height: 84px; display: grid; place-items: center; border-radius: 16px; background: var(--panel-2); box-shadow: inset 0 0 0 1px var(--line); filter: grayscale(.85) brightness(.85); }
+.sheet .kohead p { margin: 0; font-size: 14px; }
+.kohead p b { color: var(--text); }
+.healopts { display: grid; gap: 8px; margin: 12px 0 10px; }
+.hopt { display: grid; gap: 2px; width: 100%; min-height: 58px; text-align: left; border: 0; border-radius: 14px; padding: 10px 14px; background: var(--panel-2); box-shadow: inset 0 0 0 1px var(--line); color: var(--text); cursor: pointer; }
+.hopt > * { pointer-events: none; }
+.hopt b { font-size: 15px; }
+.hopt small { font-size: 12.5px; color: var(--muted); }
+.hopt.dia { background: color-mix(in oklab, var(--dia) 12%, var(--panel-2)); box-shadow: inset 0 0 0 1.5px color-mix(in oklab, var(--dia) 55%, var(--line)); }
+.hopt.dia small { color: color-mix(in oklab, var(--dia) 60%, var(--text)); }
+.sheet .kobox { margin-top: 12px; padding: 10px 12px; border-radius: 12px; background: color-mix(in oklab, var(--bad) 11%, var(--panel-2)); box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--bad) 40%, var(--line)); }
+.sheet .kobox p { margin: 0; color: var(--text); font-size: 13.5px; }
+.kobox .btnrow { margin-top: 8px; }
+/* knocked out: grey sprite with a red tag, in every list */
+.kotag { position: absolute; left: 4px; right: 4px; top: 34px; z-index: 1; display: grid; justify-items: center; padding: 2px 3px 3px; border-radius: 8px; background: rgba(134, 20, 38, .93); box-shadow: 0 2px 6px rgba(0, 0, 0, .45); line-height: 1.15; pointer-events: none; }
+.kotag b { font-family: var(--display); font-size: 11px; font-weight: 700; letter-spacing: .06em; color: #fff; }
+.kotag small { max-width: 100%; font-family: var(--body); font-size: 9.5px; font-weight: 700; color: #ffd9df; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.slot .kotag { top: 30px; }
+.cell.isko .cv, .slot.isko .sv { filter: grayscale(1) brightness(.7); }
+.cell.isko, .slot.isko { box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--bad) 55%, var(--line)); }
+.cell.isko.now { box-shadow: inset 0 0 0 2px var(--gold); }
+.solo-stage.ko .solo-vis { filter: grayscale(1) brightness(.55); }
+.ko-veil { position: absolute; inset: 0; z-index: 2; display: grid; place-content: center; justify-items: center; gap: 2px; background: rgba(48, 6, 16, .42); text-align: center; pointer-events: none; }
+.ko-veil b { font-family: var(--display); font-size: 28px; font-weight: 700; letter-spacing: .05em; color: #ff9aa6; text-shadow: 0 2px 0 rgba(0, 0, 0, .65); line-height: 1; }
+.ko-veil small { font-size: 11px; font-weight: 800; color: #fff; text-shadow: 0 1px 3px #000, 0 0 6px rgba(0, 0, 0, .7); padding: 0 6px; }
+.linkbtn { border: 0; background: none; padding: 0 2px; margin: 0; font: inherit; font-weight: 800; color: var(--gold); text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
+/* solo picker: head with X and filter stays, only the list scrolls */
+.sheet.split { display: flex; flex-direction: column; overflow: hidden; padding: 0; height: 100%; }
+.sheet.split > .pk-head { flex: none; padding: 16px 16px 10px 18px; border-bottom: 1px solid var(--line); }
+.sheet.split > .pk-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; padding: 4px 18px 18px; }
+.pk-title { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.sheet .pk-title h2 { margin: 6px 0 0; font-size: 22px; }
+.xbtn { width: var(--tap); height: var(--tap); flex: none; border: 0; border-radius: 12px; background: var(--panel-2); color: var(--text); box-shadow: inset 0 0 0 1px var(--line); display: grid; place-items: center; cursor: pointer; padding: 0; }
+.xbtn svg { width: 20px; height: 20px; pointer-events: none; }
+.pk-filter { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 42%); gap: 8px; margin-top: 10px; }
+.pk-filter input, .pk-filter select { min-width: 0; width: 100%; min-height: var(--tap); font: inherit; font-size: 16px; color: var(--text); background-color: #0b0d1c; border: 1px solid var(--line); border-radius: 12px; padding: 8px 12px; -webkit-appearance: none; appearance: none; }
+.pk-filter input::placeholder { color: var(--faint); }
+.pk-filter input::-webkit-search-decoration { -webkit-appearance: none; }
+.pk-filter select { padding-right: 30px; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5l5 5 5-5' fill='none' stroke='%23a0a8d0' stroke-width='1.8' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 11px center; background-size: 12px 8px; text-overflow: ellipsis; }
+.pk-filter input:focus-visible, .pk-filter select:focus-visible { outline: 2px solid var(--gold); outline-offset: 1px; }
+.sheet .pk-count { margin: 8px 0 0; font-size: 12.5px; color: var(--muted); }
+/* drag and drop for the boss teams */
+[data-dsrc] { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+.dnd-ghost { position: absolute; left: 0; top: 0; z-index: 80; width: 76px; padding: 4px 4px 6px; border-radius: 14px; background: color-mix(in oklab, var(--panel-2) 94%, transparent); box-shadow: inset 0 0 0 2px var(--gold), 0 12px 28px rgba(0, 0, 0, .6); text-align: center; pointer-events: none; will-change: transform; }
+.dnd-ghost .gv { height: 54px; display: grid; place-items: center; }
+.dnd-ghost b { display: block; font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+body.dnd-on, body.dnd-on * { -webkit-user-select: none; user-select: none; }
+body.dnd-on .sheet { overscroll-behavior: contain; }
+.dragging { opacity: .35; }
+.slot.over { box-shadow: inset 0 0 0 2px var(--gold); background: color-mix(in oklab, var(--gold) 14%, var(--panel-2)); }
+.slot.empty.over { outline-color: var(--gold); color: var(--gold); }
+.grid.drop-out { border-radius: 14px; box-shadow: 0 0 0 2px color-mix(in oklab, var(--bad) 65%, transparent); background: color-mix(in oklab, var(--bad) 8%, transparent); }
+.sheet .dndhint { margin: 8px 0 0; }
+
 @media (prefers-reduced-motion: reduce) {
   .mon-vis .bob, .solo-vis .bob, .btn.fight, .evo .ev-from, .evo .ev-to, .evo .ev-flash { animation: none !important; }
   .evo .ev-to { opacity: 1; }
@@ -733,6 +839,8 @@ const BALANCE = {
     xatk: { sec: 60, min: 80, max: 9, mult: 1.5 },
     candy: { factor: 1.5, min: 25 },
     stone: { sec: 30, min: 50 },
+    revive: { max: 9 },       // Wiederbelebungstrank (diamond shop, heal.revivePrice)
+    quickHeal: { max: 9 },    // Verkürzte Wiederbelebung (only from the trainer search)
   },
   // Separate leveling ("Einzeltraining"): taps only, independent of the main game.
   // EP for level L -> L+1 = needBase * L^needExp. EP per tap grows with badges.
@@ -753,7 +861,6 @@ const BALANCE = {
       1.11, 0.87, 1.04, 0.88, 0.93, 0.9, 0.9, 0.78, 2.06, 1.39, 1.38, 1.06, 1.27, 1.3, 1.29, 1.1, 2.38, 2.31, 1.41, 1.67, 0.75, 1.07, 1.32, 1,
       1.66, 1.56, 1.42, 1.15, 1.16, 1.49, 1.31, 1.03, 1.8, 1.85, 1.48, 1.34, 1.26, 1.23, 1.26, 1.08, 2.04, 1.94, 1.43, 1.43, 1.31, 1.44, 1.3, 1.12,
     ],
-    rematchGrowth: 1.1,           // every win raises the leader's levels by 10 %
     enemyHpMult: 5, playerHpMult: 3, power: 40, enemyPower: 40, stab: 1.5, minEff: 0.25, maxEff: 4,
     lossCooldown: 10,
     // coins = income/s * (baseSec + perGymSec * gym number) * factor
@@ -763,7 +870,8 @@ const BALANCE = {
     // share * (leader level / your level)^factorExp, limited to minFactor..maxFactor.
     // A leader as strong as your Pokémon gives half a level, at most 0.75 of a level, so a win
     // can never skip several levels.
-    soloEp: { share: 0.5, factorExp: 2, minFactor: 0.1, maxFactor: 1.5 },
+    // NG+ tiers raise it by ng.epPerTier per tier, never above maxLevels of a level per win.
+    soloEp: { share: 0.5, factorExp: 2, minFactor: 0.1, maxFactor: 1.5, maxLevels: 1 },
   },
   // Boss fights against legendary Pokémon. Only separately trained Pokémon from minLevel on may fight.
   bosses: {
@@ -775,8 +883,12 @@ const BALANCE = {
     shieldAt: 0.5, shieldTime: 6, shieldMult: 0.25,                    // shield once at half HP
     timeLimit: 150, swapTime: 1.5,                                     // after timeLimit the boss wins
     potionsPerFight: 4, xatkPerFight: 3, xatkTime: 10,                 // X-Angriff lasts xatkTime seconds here
-    rematchGrowth: 1.08,                                               // every win raises the boss level by 8 %
-    reward: { firstWinMult: 2, perWin: 0.25 },                         // diamonds = dia * (1 + perWin * wins), first win x2
+    // diamonds = dia * (1 + ng.diaPerTier * tier) * (1 + ng.diaPerWin * wins in the tier), the first win of a tier x2
+    reward: { firstWinMult: 2 },
+    // EP for every team member that fought and is still standing, as a share of its current level:
+    // share * (boss level / member level)^2 limited to minFactor..maxFactor, NG+ tiers add ng.epPerTier per tier,
+    // never more than maxLevels of a level per win.
+    ep: { share: 0.15, minFactor: 0.25, maxFactor: 1.2, maxLevels: 0.6 },
     lossCooldown: 15,
   },
   // Difficulty shown before a fight, by taps per second needed: up to easy = green, up to medium = yellow, above = red.
@@ -792,15 +904,33 @@ const BALANCE = {
   // Diamonds grow with the progress: diaPerBoss of the diamonds the boss of the furthest open region pays,
   // so a search never replaces the boss fights (Kanto about 2 per 4 hours, Kalos about 19).
   // Selling the whole find pays these seconds of current income per piece; boosts count as their diamond price.
+  // quickHeal ("Verkürzte Wiederbelebung", Patch 6) is a rare find only (about 7 % of short searches, up to about a third of long ones).
   search: {
     hours: [4, 8, 12],
     durMult: [1, 2.15, 3.4],
     levelBonus: 0.5,
-    find: { potion: 2, xatk: 0.8, tapBoost: 0.25, autoTap: 0.12 },
+    find: { potion: 2, xatk: 0.8, tapBoost: 0.25, autoTap: 0.12, quickHeal: 0.07 },
     diaPerBoss: 0.12,
     spread: 0.3,
-    sell: { potion: 12, xatk: 30, dia: 120 },
+    sell: { potion: 12, xatk: 30, dia: 120, quickHeal: 1800 },
   },
+  // NG+ (Patch 6): every gym leader and every boss has its own tier, from the base tier (0) up to NG+10.
+  // Inside a tier the opponent gets winGrowth stronger with every win until winsPerTier wins, then it stays.
+  // Every tier multiplies the levels by tierGrowth, and at least floor * (tierGrowth^t - 1): early opponents
+  // catch up, so the high tiers need a strong Pokémon everywhere (NG+10 about Lv. 650 to 1000).
+  // A new tier starts clearly above the capped level of the one before (1.1628 / 1.075: about 8 % higher levels).
+  // winsPerTier is only read from here; saves keep their raw win counters, so it can change later.
+  ng: {
+    winsPerTier: 15, maxTier: 10, winGrowth: 0.005, tierGrowth: 1.1628, floor: 200,
+    epPerTier: 0.06,      // EP x (1 + epPerTier * tier)
+    diaPerTier: 0.5,      // boss diamonds x (1 + diaPerTier * tier)
+    diaPerWin: 0.03,      // boss diamonds +3 % per win inside a tier (capped with the tier)
+    doneMult: 0.25,       // finished tier (winsPerTier wins) or a lower tier: a quarter of EP, diamonds and coins
+    gymFirstDia: 0.2,     // first win in NG+ tier t of a gym: dia of its region's boss x gymFirstDia x (1 + diaPerTier * t)
+  },
+  // Knocked out Pokémon (only in boss fights): healed for free in the Pokécenter after centerMin minutes, or at once
+  // with a revive potion. The rare "Verkürzte Wiederbelebung" (trainer search) cuts the stay to quickMin minutes.
+  heal: { centerMin: 120, quickMin: 30, revivePrice: 150 },
   // Diamond shop for the trainer: double trainer EP for an hour, or end the running search two hours earlier.
   // Prices per progress region: bosses pay more diamonds later, so skipping search time stays 3 to 6 times
   // as expensive as what the skipped hours would bring, in every region.
@@ -1092,7 +1222,7 @@ function battleEstimate(B, tapRate, potions, xMult = 1) {
 }
 
 // ---------- state, versions, migration ----------
-const SAVE_VERSION = 4;
+const SAVE_VERSION = 5;
 const REGION_COUNT = 6;
 const NEW_STATS = { bossWins: 0, bossLosses: 0, bossMaxHit: 0, bossBestDmg: 0, tpsBest: 0, tapSecs: 0, tapSecTaps: 0, autoTaps: 0, diaEarned: 0 };
 const NEW_STATS4 = { searchTime: 0, searches: 0, searchCancels: 0 };
@@ -1100,7 +1230,7 @@ function newState() {
   return {
     v: SAVE_VERSION, coins: 0, life: 0,
     up: { pension: 0, macho: 0, egg: 0, zahltag: 0, amulett: 0, protein: 0, kp: 0 },
-    inv: { potion: 0, xatk: 0, tapBoost: 0, autoTap: 0, trainerEp: 0, searchTime: 0 },
+    inv: { potion: 0, xatk: 0, tapBoost: 0, autoTap: 0, trainerEp: 0, searchTime: 0, revive: 0, quickHeal: 0 },
     starters: new Array(REGION_COUNT).fill(null), li: 0, stage: 0, lvl: K.startLevel, xp: 0,
     reg: {}, regCount: 0, seen: {}, regionsDone: 0,
     ready: false, stone: false, cool: 0, done: false,
@@ -1111,6 +1241,7 @@ function newState() {
     dia: 0, regionsOpen: 1, bosses: {}, bossCool: 0, boost: { tap: 0, auto: 0, tep: 0 },
     bossTeams: [[], [], []], bossTeamIdx: 0,
     search: null, searchResult: null,
+    ng: { g: {}, b: {} }, ko: {},
   };
 }
 // Brings a save of any older format to the current one. Keeps all existing progress.
@@ -1159,6 +1290,16 @@ function migrateSave(o, W) {
     delete o.bossTeam;
     o.search = null; o.searchResult = null;
     if (o.trainer) o.trainer.st = {};
+  }
+  if (from < 5) {
+    // Patch 6: NG+ tiers for gym leaders and bosses, knocked out Pokémon, revive items.
+    // All wins so far count for the base tier, at most winsPerTier; the strength follows the new tiers.
+    const WPT = BALANCE.ng.winsPerTier;
+    o.ng = { g: {}, b: {} };
+    for (const g of GYMS) { const w = (o.gyms && o.gyms[g.id]) || 0; if (w > 0) o.ng.g[g.id] = { t: 0, max: 0, w: [Math.min(WPT, w)] }; }
+    for (const b of BOSSES) { const w = (o.bosses && o.bosses[b.id]) || 0; if (w > 0) o.ng.b[b.id] = { t: 0, max: 0, w: [Math.min(WPT, w)] }; }
+    o.ko = {};
+    o.inv = Object.assign({}, o.inv || {}, { revive: 0, quickHeal: 0 });
   }
   o.v = SAVE_VERSION;
   return o;
@@ -1308,14 +1449,14 @@ function unlockShiny(W, S, id) {
 // One tap in the separate training (auto: from the autotipper). Returns events (soloLevel, shiny).
 function soloTap(W, S, events = [], auto = false) {
   const id = S.solo.sel;
-  if (!id || !S.reg[id]) return events;
+  if (!id || !S.reg[id] || isKO(S, id)) return events;
   if (auto) S.stats.autoTaps = (S.stats.autoTaps || 0) + 1;
   else S.stats.soloTaps = (S.stats.soloTaps || 0) + 1;
   return soloGain(W, S, id, soloTapEp(S), events);
 }
 // EP for a Pokémon in the separate training, with level-ups and the shiny at shinyLevel.
 function soloGain(W, S, id, ep, events = []) {
-  if (!id || !S.reg[id] || !(ep > 0)) return events;
+  if (!id || !S.reg[id] || !(ep > 0) || isKO(S, id)) return events;
   const s = BALANCE.solo;
   let L = soloLevel(S, id);
   if (L >= s.maxLevel) return events;
@@ -1381,7 +1522,7 @@ function artAll() {
 // S.search: { id, hours, start, end, wasSel } while a trainer is away; S.searchResult: { id, hours, found, at }
 // until the player keeps or sells the find. Only one search at a time; the searching trainer gives no bonuses,
 // cannot be selected and gets no trainer EP.
-const FIND_KEYS = ['potion', 'xatk', 'dia', 'tapBoost', 'autoTap'];
+const FIND_KEYS = ['potion', 'xatk', 'dia', 'tapBoost', 'autoTap', 'quickHeal'];
 function searchExpected(W, S, id, hours) {
   const B = BALANCE.search, k = B.hours.indexOf(hours);
   if (k < 0) return null;
@@ -1450,7 +1591,7 @@ function findFits(S, found) {
   const fit = {}, lost = {};
   for (const key of FIND_KEYS) {
     const n = found[key] || 0;
-    const cap = key === 'potion' || key === 'xatk' ? BALANCE.items[key].max : Infinity;
+    const cap = BALANCE.items[key] && BALANCE.items[key].max != null ? BALANCE.items[key].max : Infinity;
     const room = Math.max(0, cap - (key === 'dia' ? 0 : S.inv[key] || 0));
     fit[key] = Math.min(n, room); lost[key] = n - fit[key];
   }
@@ -1473,7 +1614,8 @@ function findSellValue(W, S, found) {
   const boss = BOSSES[Math.max(0, Math.min(BOSSES.length - 1, progressRegion(W, S)))];
   const diaSec = V.dia * BOSSES[0].dia / boss.dia;
   const sec = (found.potion || 0) * V.potion + (found.xatk || 0) * V.xatk + (found.dia || 0) * diaSec
-    + (found.tapBoost || 0) * BALANCE.boosts.tap.price * V.dia + (found.autoTap || 0) * BALANCE.boosts.auto.price * V.dia;
+    + (found.tapBoost || 0) * BALANCE.boosts.tap.price * V.dia + (found.autoTap || 0) * BALANCE.boosts.auto.price * V.dia
+    + (found.quickHeal || 0) * V.quickHeal;
   return Math.max(1, sec * cps);
 }
 function sellFind(W, S) {
@@ -1512,9 +1654,140 @@ function useSearchTimeBoost(S, now) {
   return true;
 }
 
+// ---------- NG+ tiers (Patch 6) ----------
+// S.ng.g[gym id] and S.ng.b[boss id] = { t: chosen tier, max: highest tier reached, w: [wins in tier 0, 1, ...] }.
+// Wins are stored as raw counters, everything else reads BALANCE.ng (winsPerTier can change in a later patch).
+function ngEntry(S, kind, id) { return (S.ng && S.ng[kind] && S.ng[kind][id]) || { t: 0, max: 0, w: [0] }; }
+function ngEnsure(S, kind, id) {
+  if (!S.ng) S.ng = { g: {}, b: {} };
+  if (!S.ng[kind]) S.ng[kind] = {};
+  if (!S.ng[kind][id]) S.ng[kind][id] = { t: 0, max: 0, w: [0] };
+  return S.ng[kind][id];
+}
+function ngWins(e, t) { return (e.w && e.w[t]) || 0; }
+function ngDone(e, t) { return ngWins(e, t) >= BALANCE.ng.winsPerTier; }
+function ngCanAdvance(e) { return e.t === e.max && e.max < BALANCE.ng.maxTier && ngDone(e, e.max); }
+function ngMastered(e) { return e.max >= BALANCE.ng.maxTier && ngDone(e, BALANCE.ng.maxTier); }
+function ngLabel(t) { return t ? 'NG+' + t : 'Grundstufe'; }
+// a number means wins in the base tier (as before Patch 6)
+function ngNorm(at) { return typeof at === 'number' ? { t: 0, w: at } : at || { t: 0, w: 0 }; }
+// tier and wins before the next fight
+function ngAt(S, kind, id) { const e = ngEntry(S, kind, id); return { t: e.t, w: ngWins(e, e.t) }; }
+// Finished tier or a lower one than the highest: a quarter of EP, diamonds and coins.
+function ngReduced(e, at) { at = ngNorm(at); return at.t < (e.max || 0) || at.w >= BALANCE.ng.winsPerTier; }
+function ngAdvance(S, kind, id) {
+  const e = ngEnsure(S, kind, id);
+  if (!ngCanAdvance(e)) return false;
+  e.max++; e.t = e.max;
+  while (e.w.length <= e.max) e.w.push(0);
+  return true;
+}
+function ngSelect(S, kind, id, t) {
+  const e = ngEnsure(S, kind, id);
+  if (!(t >= 0 && t <= e.max) || t !== Math.floor(t)) return false;
+  e.t = t;
+  return true;
+}
+// Level of an opponent whose base level is L0, in tier t after w wins in that tier.
+function ngTierBase(L0, t) {
+  const N = BALANCE.ng;
+  if (!t) return L0;
+  const g = Math.pow(N.tierGrowth, t);
+  return Math.max(L0 * g, N.floor * (g - 1));
+}
+function ngLevel(L0, at) {
+  const { t, w } = ngNorm(at), N = BALANCE.ng;
+  return ngTierBase(L0, t) * (1 + N.winGrowth * Math.min(w, N.winsPerTier));
+}
+// Records a win in the chosen tier. counted: it still raised the tier counter (below winsPerTier).
+function ngWin(S, kind, id) {
+  const e = ngEnsure(S, kind, id), t = e.t, before = ngWins(e, t), WPT = BALANCE.ng.winsPerTier;
+  const reduced = ngReduced(e, { t, w: before });
+  while (e.w.length <= t) e.w.push(0);
+  e.w[t] = before + 1;
+  return { t, before, first: before === 0, counted: before < WPT, reduced, done: before < WPT && before + 1 >= WPT, mastered: ngMastered(e) };
+}
+function ngHighest(S) {
+  let m = 0;
+  for (const k of ['g', 'b']) for (const id in (S.ng && S.ng[k]) || {}) m = Math.max(m, S.ng[k][id].max || 0);
+  return m;
+}
+function ngMasteredCount(S) {
+  let n = 0;
+  for (const k of ['g', 'b']) for (const id in (S.ng && S.ng[k]) || {}) if (ngMastered(S.ng[k][id])) n++;
+  return n;
+}
+
+// ---------- knocked out Pokémon (boss fights only) and the Pokécenter ----------
+// S.ko[id] = { at: knocked out at, start: in the Pokécenter since (0: not yet), end: healed at (0: not yet) }.
+// A knocked out Pokémon can neither fight nor level in the separate training.
+function koOf(S, id) { return (S.ko && S.ko[id]) || null; }
+function isKO(S, id, now) {
+  const k = koOf(S, id); if (!k) return false;
+  now = now == null ? CLOCK.now() : now;
+  return !(k.end && now >= k.end);
+}
+function koMark(S, id, now) {
+  if (!S.ko) S.ko = {};
+  now = now == null ? CLOCK.now() : now;
+  S.ko[id] = { at: now, start: 0, end: 0 };
+}
+// ms until the Pokémon is healed in the Pokécenter, or null when it is not there
+function koLeft(S, id, now) {
+  const k = koOf(S, id); if (!k || !k.end) return null;
+  now = now == null ? CLOCK.now() : now;
+  return Math.max(0, k.end - now);
+}
+function koSend(S, id, now) {
+  const k = koOf(S, id); if (!k || k.end) return false;
+  now = now == null ? CLOCK.now() : now;
+  k.start = now; k.end = now + BALANCE.heal.centerMin * 60e3;
+  return true;
+}
+// Verkürzte Wiederbelebung: the stay in the Pokécenter takes quickMin minutes (sends it there if needed).
+function koQuick(S, id, now) {
+  const k = koOf(S, id);
+  if (!k || !(S.inv.quickHeal > 0)) return false;
+  now = now == null ? CLOCK.now() : now;
+  if (!isKO(S, id, now)) return false;
+  if (!k.end) { k.start = now; k.end = now + BALANCE.heal.centerMin * 60e3; }
+  const end = k.start + BALANCE.heal.quickMin * 60e3;
+  if (end >= k.end) return false;
+  S.inv.quickHeal--;
+  k.end = end;
+  return true;
+}
+function koRevive(S, id) {
+  if (!koOf(S, id) || !(S.inv.revive > 0)) return false;
+  S.inv.revive--;
+  delete S.ko[id];
+  return true;
+}
+function buyRevive(S) {
+  const P = BALANCE.heal.revivePrice;
+  if (S.dia < P || (S.inv.revive || 0) >= BALANCE.items.revive.max) return false;
+  S.dia -= P; S.inv.revive = (S.inv.revive || 0) + 1;
+  return true;
+}
+// Pokémon whose time in the Pokécenter is over leave it healed. Returns their ids.
+function koHealDue(S, now) {
+  now = now == null ? CLOCK.now() : now;
+  const out = [];
+  for (const id in S.ko || {}) { const k = S.ko[id]; if (k.end && now >= k.end) { out.push(+id); delete S.ko[id]; } }
+  return out;
+}
+// knocked out Pokémon, the ones that wait for the Pokécenter first
+function koList(S, now) {
+  now = now == null ? CLOCK.now() : now;
+  return Object.keys(S.ko || {}).map(Number).filter(id => isKO(S, id, now))
+    .sort((a, b) => (S.ko[a].end ? 1 : 0) - (S.ko[b].end ? 1 : 0) || (S.ko[a].end || S.ko[a].at) - (S.ko[b].end || S.ko[b].at));
+}
+
 // ---------- gyms ----------
 function gymFirstIndex(r) { return GYMS.findIndex(g => g.r === r); }
+// Badge wins: every win that still counted in a tier (old saves keep all their wins). Unlocks the next leader.
 function gymWins(S, gi) { return S.gyms[GYMS[gi].id] || 0; }
+function gymAt(S, gi) { return ngAt(S, 'g', GYMS[gi].id); }
 // The furthest region that is reached and unlocked (gyms and bosses of it are open).
 function progressRegion(W, S) {
   if (S.done) return W.R.length - 1;
@@ -1527,12 +1800,12 @@ function gymUnlocked(W, S, gi) {
   if (!gymRegionOpen(W, S, g.r)) return false;
   return gi === gymFirstIndex(g.r) || gymWins(S, gi - 1) > 0;
 }
-function gymTeam(gi, wins) {
+// The leader's team in tier at.t after at.w wins there (a number: wins in the base tier).
+function gymTeam(gi, at) {
   const g = GYMS[gi], B = BALANCE.gyms;
-  const ace = B.aceLevels[g.r][gi - gymFirstIndex(g.r)];
+  const ace = ngLevel(B.aceLevels[g.r][gi - gymFirstIndex(g.r)], at);
   const origAce = Math.max(...g.team.map(t => t[1]));
-  const grow = Math.pow(B.rematchGrowth, wins);
-  return g.team.map(([id, lv]) => ({ id, lvl: Math.max(2, Math.round(ace * (lv / origAce) * grow)) }));
+  return g.team.map(([id, lv]) => ({ id, lvl: Math.max(2, Math.round(ace * (lv / origAce))) }));
 }
 function monStats(sp, L) {
   const [hp, atk, def, spa, , spd] = sp.stats;
@@ -1544,14 +1817,15 @@ function monStats(sp, L) {
 }
 function gymEff(W, att, def) { const B = BALANCE.gyms; return Math.min(B.maxEff, Math.max(B.minEff, effRaw(W, att, def))); }
 function gymDamage(L, power, atk, def, eff) { return ((2 * L / 5 + 2) * power * atk / def / 50 + 2) * BALANCE.gyms.stab * eff; }
-// Battle numbers for the separately leveled Pokémon (or a given species/level) against a gym.
-function gymSetup(W, S, gi, id, L) {
+// Battle numbers for the separately leveled Pokémon (or a given species/level) against a gym in tier at (default: chosen).
+function gymSetup(W, S, gi, id, L, at) {
   const B = BALANCE.gyms;
   id = id || S.solo.sel;
   L = L || soloLevel(S, id);
+  at = at == null ? gymAt(S, gi) : ngNorm(at);
   const sp = W.P[id - 1];
   const me = monStats(sp, L);
-  const team = gymTeam(gi, gymWins(S, gi)).map(m => {
+  const team = gymTeam(gi, at).map(m => {
     const o = W.P[m.id - 1], os = monStats(o, m.lvl);
     const pe = gymEff(W, sp.types, o.types), ee = gymEff(W, o.types, sp.types);
     const str = B.strength[gi] || 1;
@@ -1562,7 +1836,7 @@ function gymSetup(W, S, gi, id, L) {
       eHit: gymDamage(m.lvl, B.enemyPower, os.atk, me.def, ee) * str,
     };
   });
-  return { gi, id, sp, L, maxHp: me.hp * B.playerHpMult, team };
+  return { gi, id, sp, L, at, maxHp: me.hp * B.playerHpMult, team };
 }
 function gymEstimate(G, tapRate, potions, xMult = 1) {
   let t = 0, taken = 0;
@@ -1581,34 +1855,57 @@ function gymTapsNeeded(G, potions, xMult = 1) {
   for (let i = 0; i < 30; i++) { const mid = (lo + hi) / 2; if (gymEstimate(G, mid, potions, xMult).win) hi = mid; else lo = mid; }
   return hi;
 }
-function gymReward(W, S, gi, wins) {
-  const R = BALANCE.gyms.reward;
-  const ace = Math.max(...gymTeam(gi, wins).map(m => m.lvl));
-  const L = S.solo.sel ? soloLevel(S, S.solo.sel) : ace;
-  const factor = wins === 0 ? R.firstWinMult : Math.max(R.minFactor, Math.min(1, Math.pow(ace / L, R.factorExp)));
-  return cpsNow(W, S) * (R.baseSec + R.perGymSec * gi) * factor * tBonus(S, 'gymCoins');
+// Recommended level: the lowest level at which Pokémon id needs at most `taps` taps per second without items.
+function gymRecLevel(W, S, gi, at, id, taps) {
+  id = id || S.solo.sel;
+  const win = L => gymEstimate(gymSetup(W, S, gi, id, L, at), taps, 0).win;
+  let lo = 1, hi = 3000;
+  if (!win(hi)) return Infinity;
+  while (hi - lo > 1) { const m = (lo + hi) >> 1; if (win(m)) hi = m; else lo = m; }
+  return hi;
 }
-// EP for the Pokémon in the separate training after beating gym gi (wins = wins before this one).
+// Coins for a win: income/s * (baseSec + perGymSec * gym number) * factor, the first win of a tier x firstWinMult,
+// a finished or lower tier only ng.doneMult of it.
+function gymReward(W, S, gi, at) {
+  const R = BALANCE.gyms.reward;
+  at = at == null ? gymAt(S, gi) : ngNorm(at);
+  const ace = Math.max(...gymTeam(gi, at).map(m => m.lvl));
+  const L = S.solo.sel ? soloLevel(S, S.solo.sel) : ace;
+  const factor = at.w === 0 ? R.firstWinMult : Math.max(R.minFactor, Math.min(1, Math.pow(ace / L, R.factorExp)));
+  const red = ngReduced(ngEntry(S, 'g', GYMS[gi].id), at) ? BALANCE.ng.doneMult : 1;
+  return cpsNow(W, S) * (R.baseSec + R.perGymSec * gi) * factor * red * tBonus(S, 'gymCoins');
+}
+// EP for the Pokémon in the separate training after beating gym gi in tier at (wins before this one).
 // Always a share of the Pokémon's current level, so a win is noticeable but never skips levels.
-function gymSoloEp(W, S, gi, wins) {
-  const E = BALANCE.gyms.soloEp, id = S.solo.sel;
-  if (!id) return 0;
+function gymSoloEp(W, S, gi, at) {
+  const E = BALANCE.gyms.soloEp, N = BALANCE.ng, id = S.solo.sel;
+  if (!id || isKO(S, id)) return 0;
+  at = at == null ? gymAt(S, gi) : ngNorm(at);
   const L = soloLevel(S, id);
   if (L >= BALANCE.solo.maxLevel) return 0;
-  const ace = Math.max(...gymTeam(gi, wins).map(m => m.lvl));
+  const ace = Math.max(...gymTeam(gi, at).map(m => m.lvl));
   const factor = Math.max(E.minFactor, Math.min(E.maxFactor, Math.pow(ace / L, E.factorExp)));
-  return soloNeed(L) * E.share * factor;
+  const red = ngReduced(ngEntry(S, 'g', GYMS[gi].id), at) ? N.doneMult : 1;
+  return soloNeed(L) * Math.min(E.maxLevels, E.share * factor * (1 + N.epPerTier * at.t)) * red;
+}
+// One-time diamonds for the first win in NG+ tier t (t >= 1) of a gym.
+function gymFirstDia(gi, t) {
+  const N = BALANCE.ng;
+  return t > 0 ? Math.round(BOSSES[GYMS[gi].r].dia * N.gymFirstDia * (1 + N.diaPerTier * t)) : 0;
 }
 // Difficulty class for a number of taps per second: 'ok' (easy), 'mid', 'hard'.
 function diffClass(taps) { const D = BALANCE.difficulty; return taps <= D.easy ? 'ok' : taps <= D.medium ? 'mid' : 'hard'; }
 function gymWin(W, S, gi, events = []) {
-  const g = GYMS[gi], wins = gymWins(S, gi);
-  const reward = gymReward(W, S, gi, wins);
-  const ep = gymSoloEp(W, S, gi, wins);
-  S.gyms[g.id] = wins + 1;
+  const g = GYMS[gi], at = gymAt(S, gi);
+  const reward = gymReward(W, S, gi, at);
+  const ep = gymSoloEp(W, S, gi, at);
+  const r = ngWin(S, 'g', g.id);
+  const dia = r.first ? gymFirstDia(gi, r.t) : 0;
+  if (r.counted || !S.gyms[g.id]) S.gyms[g.id] = (S.gyms[g.id] || 0) + 1;
   S.coins += reward; S.life += reward;
+  if (dia) { S.dia += dia; S.stats.diaEarned = (S.stats.diaEarned || 0) + dia; }
   S.stats.gymWins = (S.stats.gymWins || 0) + 1;
-  events.push({ e: 'gymWin', gi, count: wins + 1, reward, first: wins === 0, ep });
+  events.push({ e: 'gymWin', gi, count: S.gyms[g.id], reward, first: r.first, ep, dia, t: r.t, w: r.before + 1, reduced: r.reduced, done: r.done, mastered: r.mastered });
   trainerGain(S, BALANCE.trainer.ep.gymWin + BALANCE.trainer.ep.gymPerTier * gi, events);
   soloGain(W, S, S.solo.sel, ep, events);
   return events;
@@ -1639,31 +1936,49 @@ function diaShortfall(W, S, price) {
 
 // ---------- boss fights ----------
 function bossWins(S, bi) { return (S.bosses && S.bosses[BOSSES[bi].id]) || 0; }
+function bossAt(S, bi) { return ngAt(S, 'b', BOSSES[bi].id); }
 function bossUnlocked(W, S, bi) { return progressRegion(W, S) >= BOSSES[bi].r; }
-function bossLevel(bi, wins) { return Math.round(BOSSES[bi].lvl * Math.pow(BALANCE.bosses.rematchGrowth, wins)); }
-function bossReward(bi, wins) {
-  const R = BALANCE.bosses.reward;
-  return Math.round(BOSSES[bi].dia * (1 + R.perWin * wins) * (wins === 0 ? R.firstWinMult : 1));
+// Boss level in tier at.t after at.w wins there (a number: wins in the base tier).
+function bossLevel(bi, at) { return Math.round(ngLevel(BOSSES[bi].lvl, at)); }
+function bossReward(bi, at, reduced) {
+  const N = BALANCE.ng, R = BALANCE.bosses.reward;
+  at = ngNorm(at);
+  const base = BOSSES[bi].dia * (1 + N.diaPerTier * at.t) * (1 + N.diaPerWin * Math.min(at.w, N.winsPerTier));
+  return Math.round(base * (at.w === 0 ? R.firstWinMult : 1) * (reduced ? N.doneMult : 1));
 }
-// Separately trained Pokémon that may fight a boss, strongest first.
+function bossRewardFor(S, bi, at) { at = at == null ? bossAt(S, bi) : ngNorm(at); return bossReward(bi, at, ngReduced(ngEntry(S, 'b', BOSSES[bi].id), at)); }
+// EP for a team member that fought and is still standing after a win (share of its level, see BALANCE.bosses.ep).
+function bossEp(W, S, bi, at, id) {
+  const E = BALANCE.bosses.ep, N = BALANCE.ng;
+  at = at == null ? bossAt(S, bi) : ngNorm(at);
+  const Lm = soloLevel(S, id);
+  if (Lm >= BALANCE.solo.maxLevel || isKO(S, id)) return 0;
+  const factor = Math.max(E.minFactor, Math.min(E.maxFactor, Math.pow(bossLevel(bi, at) / Lm, 2)));
+  const red = ngReduced(ngEntry(S, 'b', BOSSES[bi].id), at) ? N.doneMult : 1;
+  return soloNeed(Lm) * Math.min(E.maxLevels, E.share * factor * (1 + N.epPerTier * at.t)) * red;
+}
+// Separately trained Pokémon that may fight a boss, strongest first (knocked out ones included, they are marked).
 function bossEligible(S) {
   return Object.keys(S.solo.lv).map(Number)
     .filter(id => S.reg[id] && soloLevel(S, id) >= BALANCE.bosses.minLevel)
     .sort((a, b) => soloLevel(S, b) - soloLevel(S, a) || a - b);
 }
-function bossSetup(W, S, bi, team) {
-  const B = BALANCE.bosses, b = BOSSES[bi], wins = bossWins(S, bi);
-  const L = bossLevel(bi, wins), sp = W.P[b.mon - 1], bs = monStats(sp, L);
+// The members of a team that can fight right now (not knocked out).
+function bossReady(S, team, now) { return team.filter(id => !isKO(S, id, now)); }
+// L: all members at this level (for the recommended team level); default: their own levels.
+function bossSetup(W, S, bi, team, at, L) {
+  const B = BALANCE.bosses, b = BOSSES[bi];
+  at = at == null ? bossAt(S, bi) : ngNorm(at);
+  const Lb = bossLevel(bi, at), sp = W.P[b.mon - 1], bs = monStats(sp, Lb);
   const members = team.map(id => {
-    const m = W.P[id - 1], Lm = soloLevel(S, id), ms = monStats(m, Lm);
+    const m = W.P[id - 1], Lm = L || soloLevel(S, id), ms = monStats(m, Lm);
     const pe = gymEff(W, m.types, sp.types), ee = gymEff(W, sp.types, m.types);
     const hit = gymDamage(Lm, B.power, ms.atk, bs.def, pe);
-    const eHit = gymDamage(L, B.enemyPower, bs.atk, ms.def, ee) * B.dmgMult;
+    const eHit = gymDamage(Lb, B.enemyPower, bs.atk, ms.def, ee) * B.dmgMult;
     return { id, sp: m, L: Lm, pe, ee, maxHp: ms.hp * B.playerHpMult, hit, tap: hit * K.tapRatio, special: hit * K.specialMult, eHit, eSpecial: eHit * B.specialMult };
   });
-  return { bi, id: b.id, sp, L, wins, hpMax: bs.hp * B.hpMult, members };
+  return { bi, id: b.id, sp, L: Lb, wins: at.w, at, hpMax: bs.hp * B.hpMult, members };
 }
-// Fight state. inv: items in the bag (only up to the per-fight limits can be used).
 function bossFight(G, inv) {
   const B = BALANCE.bosses;
   return {
@@ -1784,14 +2099,36 @@ function bossTapsNeeded(G, inv, useItems = true, maxRate = 12) {
   for (let i = 0; i < 14; i++) { const mid = (lo + hi) / 2; if (bossSimulate(G, inv, mid, useItems).win) hi = mid; else lo = mid; }
   return hi;
 }
-function bossWin(W, S, bi, F, events = []) {
-  const b = BOSSES[bi], wins = bossWins(S, bi);
-  const dia = bossReward(bi, wins);
-  S.bosses[b.id] = wins + 1;
+// Recommended team level: the lowest level (all members the same) at which the team needs at most `taps` taps per second.
+function bossRecLevel(W, S, bi, at, team, taps) {
+  if (!team.length) return Infinity;
+  const win = L => bossSimulate(bossSetup(W, S, bi, team, at, L), { potion: 0, xatk: 0 }, taps, false).win;
+  let lo = 1, hi = 3000;
+  if (!win(hi)) return Infinity;
+  while (hi - lo > 2) { const m = (lo + hi) >> 1; if (win(m)) hi = m; else lo = m; }
+  return hi;
+}
+// A boss win: diamonds, EP for the members that fought and are still standing, and the win in the chosen tier.
+function bossWin(W, S, bi, F, events = [], now) {
+  const b = BOSSES[bi], at = F && F.G && F.G.at ? F.G.at : bossAt(S, bi);
+  const reduced = ngReduced(ngEntry(S, 'b', b.id), at);
+  const dia = bossReward(bi, at, reduced);
+  const win = { e: 'bossWin', bi, count: 0, dia, first: at.w === 0, t: at.t, w: at.w + 1, reduced, done: false, mastered: false, eps: [] };
+  events.push(win);
+  if (F && F.G) F.G.members.forEach((m, i) => {
+    if (i > F.idx || F.mhp[i] <= 0 || isKO(S, m.id, now)) return;
+    const ep = bossEp(W, S, bi, at, m.id), from = soloLevel(S, m.id);
+    if (!(ep > 0)) return;
+    soloGain(W, S, m.id, ep, events);
+    win.eps.push({ id: m.id, ep, from, to: soloLevel(S, m.id) });
+  });
+  const r = ngWin(S, 'b', b.id);
+  win.done = r.done; win.mastered = r.mastered;
+  S.bosses[b.id] = (S.bosses[b.id] || 0) + 1;
+  win.count = S.bosses[b.id];
   S.dia += dia;
   S.stats.bossWins = (S.stats.bossWins || 0) + 1;
   S.stats.diaEarned = (S.stats.diaEarned || 0) + dia;
-  events.push({ e: 'bossWin', bi, count: wins + 1, dia, first: wins === 0 });
   return events;
 }
 // Records damage of a finished or abandoned boss fight in the statistics.
@@ -2086,8 +2423,35 @@ const Music = (function () {
 /* Pokémon Idle-Trainer: page logic. Uses the core rules (BALANCE, GYMS, TRAINERS, ctx, addXP, ...) and DATA/TABLES. */
 (function () {
   // ---------- version and patch notes ----------
-  const GAME_VERSION = '1.5.0';
+  const GAME_VERSION = '1.6.0';
   const PATCH_NOTES = [
+    {
+      v: '1.6.0', date: '14.10.2026', title: 'Patch 6.0: Bedienung, Heilung und NG+',
+      parts: [
+        ['NG+ für Arenaleiter und Bosse', [
+          '<b>Feste Stufen statt endlosem Anstieg:</b> Jeder Arenaleiter und jeder Boss hat seine eigene Stufe, von der Grundstufe bis NG+10. Innerhalb einer Stufe wird der Gegner mit jedem Sieg etwas stärker, nach 15 Siegen bleibt er so.',
+          '<b>Nächste Stufe:</b> Nach 15 Siegen entscheidest du selbst, wann du in die nächste NG+-Stufe wechselst. Jede Stufe macht die Gegner deutlich stärker. Zurück in eine erreichte niedrigere Stufe geht jederzeit, dein Fortschritt bleibt.',
+          '<b>Anzeige:</b> Überall siehst du Stufe und Siege, zum Beispiel NG+3 · 9/15, dazu pro Stufe das empfohlene Level passend zur Farbe der Schwierigkeit. Nach 15 Siegen in NG+10 ist ein Gegner gemeistert.',
+          '<b>Belohnungen:</b> Bosse bringen jetzt auch EP für die Pokémon, die gekämpft haben und noch stehen. Höhere Stufen bringen mehr EP und Diamanten, der erste Sieg in einer neuen Stufe zusätzliche Diamanten. Nach 15 Siegen in einer Stufe und in niedrigeren Stufen gibt es nur noch ein Viertel.',
+          '<b>Orden:</b> Jeder Orden zeigt einen Stern pro erreichter NG+-Stufe, gemeisterte Gegner bekommen eine Krone.',
+        ]],
+        ['Heilung', [
+          '<b>Kampfunfähig:</b> Wird ein Pokémon im Bosskampf besiegt, ist es kampfunfähig. Es kann dann weder kämpfen noch im Einzeltraining leveln. In Arenakämpfen passiert das nicht.',
+          '<b>Pokécenter:</b> Erscheint in der Arena, sobald ein Pokémon kampfunfähig ist. Kostenlos, nach 2 Stunden ist es wieder fit. Sofort geht es mit einem Wiederbelebungstrank für 150 Diamanten, den gibt es auch im Shop.',
+          '<b>Verkürzte Wiederbelebung:</b> Ein seltener Fund der Trainer-Suche. Er verkürzt die Zeit im Pokécenter auf 30 Minuten.',
+        ]],
+        ['Bedienung', [
+          '<b>Einzeltraining:</b> Das Auswahlfenster hat oben ein X und eine Suche nach Namen und Typ.',
+          '<b>Boss-Teams:</b> Pokémon ziehst du per Drag and Drop ins Team und stellst sie so um. Am Handy kurz gedrückt halten, dann ziehen. Antippen geht weiter.',
+        ]],
+        ['Statistik', [
+          'Neu: höchste erreichte NG+-Stufe und gemeisterte Gegner.',
+        ]],
+        ['Dein Spielstand', [
+          'Dein Fortschritt bleibt vollständig erhalten. Bisherige Siege zählen für die Grundstufe, höchstens 15. Die Stärke der Gegner richtet sich jetzt nach den Stufen, vorher wurde wieder eine Sicherung angelegt (Menü, Spielstand).',
+        ]],
+      ],
+    },
     {
       v: '1.5.0', date: '14.10.2026', title: 'Patch 5.0: Fehlerbehebung bei den Designs',
       parts: [
@@ -2385,7 +2749,8 @@ const Music = (function () {
     for (const u of UPG) s.up[u.id] = clamp(Math.floor(+s.up[u.id] || 0), 0, u.max || 100000);
     for (const k of ['potion', 'xatk']) s.inv[k] = clamp(Math.floor(+s.inv[k] || 0), 0, BALANCE.items[k].max);
     for (const k of ['tapBoost', 'autoTap', 'trainerEp', 'searchTime']) s.inv[k] = clamp(Math.floor(+s.inv[k] || 0), 0, 999);
-    for (const k of Object.keys(s.inv)) if (!['potion', 'xatk', 'tapBoost', 'autoTap', 'trainerEp', 'searchTime'].includes(k)) delete s.inv[k];
+    for (const k of ['revive', 'quickHeal']) s.inv[k] = clamp(Math.floor(+s.inv[k] || 0), 0, BALANCE.items[k].max);
+    for (const k of Object.keys(s.inv)) if (!['potion', 'xatk', 'tapBoost', 'autoTap', 'trainerEp', 'searchTime', 'revive', 'quickHeal'].includes(k)) delete s.inv[k];
     s.regCount = Object.keys(s.reg).length;
     s.li = clamp(Math.floor(s.li), 0, W.lines.length - 1);
     const line = W.lines[lineOrder(W, s.starters)[s.li]];
@@ -2438,6 +2803,27 @@ const Music = (function () {
       s.searchResult = { id: sr.id, hours: BALANCE.search.hours.includes(+sr.hours) ? +sr.hours : 4, found, at: isFinite(+sr.at) ? +sr.at : Date.now() };
     }
     if (s.search && s.searchResult) s.search = null;
+    // Patch 6: NG+ tiers per gym leader and boss, knocked out Pokémon
+    const NGB0 = BALANCE.ng, ngIn = isObj(o.ng) ? o.ng : {};
+    s.ng = { g: {}, b: {} };
+    for (const [k, list] of [['g', GYMS], ['b', BOSSES]]) {
+      const src = isObj(ngIn[k]) ? ngIn[k] : {};
+      for (const x of list) {
+        const e = src[x.id]; if (!isObj(e)) continue;
+        const max = clamp(Math.floor(+e.max) || 0, 0, NGB0.maxTier);
+        const w = (Array.isArray(e.w) ? e.w : []).slice(0, max + 1).map(n => clamp(Math.floor(+n) || 0, 0, 1e6));
+        while (w.length <= max) w.push(0);
+        s.ng[k][x.id] = { t: clamp(Math.floor(+e.t) || 0, 0, max), max, w };
+      }
+    }
+    s.ko = {};
+    if (isObj(o.ko)) for (const k in o.ko) {
+      const id = +k, x = o.ko[k];
+      if (!(id >= 1 && id <= NPOKE) || !isObj(x)) continue;
+      const num = v => (isFinite(+v) ? Math.max(0, +v) : 0);
+      s.ko[id] = { at: num(x.at), start: num(x.start), end: num(x.end) };
+      if (s.ko[id].end && !s.ko[id].start) s.ko[id].start = s.ko[id].end - BALANCE.heal.centerMin * 60e3;
+    }
     // shinies cover whole families, including evolutions that are new in this version
     for (const id of Object.keys(s.shiny)) unlockShiny(W, s, +id);
     s.seenVersion = typeof o.seenVersion === 'string' ? o.seenVersion : '1.0.0';
@@ -2587,7 +2973,7 @@ const Music = (function () {
     closeSheet(true);
     const veil = document.createElement('div');
     veil.className = 'veil';
-    veil.innerHTML = `<div class="sheet" role="dialog" aria-modal="true">${html}</div>`;
+    veil.innerHTML = `<div class="sheet${opts.cls ? ' ' + opts.cls : ''}" role="dialog" aria-modal="true">${html}</div>`;
     // A sheet can open in the middle of a tap (e.g. a shiny on pointerdown). The click that finishes
     // that tap must not close the sheet or press one of its buttons, so it is swallowed once.
     let swallow = pressActive;
@@ -2673,10 +3059,10 @@ const Music = (function () {
       <div class="diabig"><span class="gem" aria-hidden="true"></span><b class="num">${fInt(S.dia)}</b>${nr >= 0 ? `<small>von ${fInt(regionPrice(nr))} für ${esc(W.R[nr][0])}</small>` : '<small>Alle Regionen sind frei</small>'}</div>
       ${nr >= 0 ? `<div class="bar dia" role="progressbar" aria-label="Diamanten für ${esc(W.R[nr][0])}"><i style="width:${pct.toFixed(1)}%"></i></div>` : ''}
       <ul class="help" style="margin-top:12px">
-        <li><b>Verdienen:</b> Jeder Sieg in einem Bosskampf bringt Diamanten. Der erste Sieg gegen einen Boss zählt doppelt, jede Revanche bringt etwas mehr.</li>
+        <li><b>Verdienen:</b> Jeder Sieg in einem Bosskampf bringt Diamanten, höhere NG+-Stufen mehr. Der erste Sieg einer Stufe zählt doppelt, und der erste Arenasieg in einer neuen NG+-Stufe bringt ein paar extra.</li>
         <li><b>Regionen:</b> Ist eine Region abgeschlossen, schaltest du die nächste mit Diamanten frei.</li>
         <li><b>Trainer-Suche:</b> Ein Trainer auf der Suche bringt ein paar Diamanten mit.</li>
-        <li><b>Shop:</b> Boosts für das Einzeltraining und für deine Trainer kosten ebenfalls Diamanten.</li>
+        <li><b>Shop:</b> Boosts für das Einzeltraining und für deine Trainer und der Wiederbelebungstrank kosten ebenfalls Diamanten.</li>
       </ul>
       <div class="row"><button class="btn" id="di-boss" type="button">Zu den Bosskämpfen</button><button class="btn gold" id="di-ok" type="button">OK</button></div>`);
     $('#di-ok', el).onclick = () => closeSheet();
@@ -2972,6 +3358,7 @@ const Music = (function () {
     $('#train-dot').hidden = tab === 'train' || !(S.ready || S.stone || (gated() && S.dia >= regionPrice(gateRegion(W, S))));
     $('#arena-dot').hidden = tab === 'arena' || !(S.regCount > 0 && S.flags.arenaKey !== arenaKey());
     checkSearchDone();
+    checkHeal();
     $('#trainer-dot').hidden = tab === 'trainer' || !(S.searchResult || (!S.trainer.sel && !S.flags.trainerSeen));
     if (tab === 'train' && !mainIdle() && $('#t-fill')) {
       const need = xpNeed(W, c.line, c.p, S.lvl, c.sp);
@@ -3065,13 +3452,32 @@ const Music = (function () {
       <p class="lead" style="margin:0 0 8px">Boosts fürs Einzeltraining. Nach dem Kauf liegen sie im Beutel, starten kannst du sie im Einzeltraining.</p>
       <div class="ups">${['tap', 'auto'].map(boostRow).join('')}</div>
       <p class="lead" style="margin:14px 0 8px">Boosts für deine Trainer. Auch sie liegen nach dem Kauf im Beutel, einsetzen kannst du sie im Trainer-Bereich.</p>
-      <div class="ups">${['ep', 'time'].map(trainerBoostRow).join('')}</div>`;
+      <div class="ups">${['ep', 'time'].map(trainerBoostRow).join('')}</div>
+      <p class="lead" style="margin:14px 0 8px">Heilung für Pokémon, die im Bosskampf besiegt wurden.</p>
+      <div class="ups">${reviveRow()}</div>
+      <p class="fine" style="margin:8px 2px 0">Verkürzte Wiederbelebung im Beutel: ${S.inv.quickHeal || 0}. Sie verkürzt die Zeit im Pokécenter auf ${BALANCE.heal.quickMin} Minuten, kaufen kann man sie nicht: Es gibt sie nur selten bei der Trainer-Suche.</p>`;
     $$('[data-bm]', v).forEach(b => b.onclick = () => { buyMode = b.dataset.bm === 'max' ? 'max' : +b.dataset.bm; renderShop(); });
     $$('[data-buy]', v).forEach(b => b.onclick = () => buyUpgrade(b.dataset.buy));
     $$('[data-item-buy]', v).forEach(b => b.onclick = () => buyItem(b.dataset.itemBuy));
     $$('[data-boost-buy]', v).forEach(b => b.onclick = () => tryBuyBoost(b.dataset.boostBuy));
     $$('[data-tboost-buy]', v).forEach(b => b.onclick = () => tryBuyTrainerBoost(b.dataset.tboostBuy));
+    const rb = $('[data-revive-buy]', v);
+    if (rb) rb.onclick = () => {
+      if ((S.inv.revive || 0) >= BALANCE.items.revive.max) { toast(`Höchstens ${BALANCE.items.revive.max} Wiederbelebungstränke im Beutel.`); return; }
+      confirmDiaSpend('Wiederbelebungstrank', BALANCE.heal.revivePrice, () => {
+        if (!buyRevive(S)) return;
+        markDirty(); saveLocal(); vibe(10); updateShopButtons();
+        toast('Wiederbelebungstrank im Beutel.');
+      });
+    };
     updateShopButtons();
+  }
+  function reviveRow() {
+    const Hh = BALANCE.heal;
+    return `<div class="up" data-revive style="--c:#f05a8a">
+      <div class="up-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-4.4-9.3-9A5.3 5.3 0 0 1 12 6.4 5.3 5.3 0 0 1 21.3 12C19 16.6 12 21 12 21z"/><path d="M12 10v5M9.5 12.5h5"/></svg></div>
+      <div class="up-main"><div class="up-name">Wiederbelebungstrank</div><div class="up-bag" data-lv></div><div class="up-desc">Macht ein Pokémon, das im Bosskampf besiegt wurde, sofort wieder fit. Kostenlos dauert es im Pokécenter ${fTime(Hh.centerMin * 60)}</div></div>
+      <button class="buy dia" type="button" data-revive-buy><small>Kaufen</small><b>${fInt(Hh.revivePrice)} ${GEM}</b></button></div>`;
   }
   const TBOOSTS = {
     ep: { name: 'EP-Boost für Trainer', inv: 'trainerEp', col: '#ffcb45', desc: () => `${BALANCE.trainerBoosts.ep.sec / 3600} Stunde lang ×${BALANCE.trainerBoosts.ep.mult} Trainer-EP für deinen aktiven Trainer. Der Preis steigt mit der Region.`, ico: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/><path d="M18 3v4M16 5h4"/>' },
@@ -3145,6 +3551,8 @@ const Music = (function () {
       }
     }
     const sd = $('#shop-dia', v); if (sd) sd.textContent = fInt(S.dia);
+    const rv = $('[data-revive]', v);
+    if (rv) { const have = S.inv.revive || 0; $('[data-lv]', rv).textContent = have ? 'Im Beutel: ' + have : ''; $('[data-revive-buy]', rv).classList.toggle('poor', S.dia < BALANCE.heal.revivePrice || have >= BALANCE.items.revive.max); }
     for (const k of Object.keys(BOOSTS)) {
       const row = $(`[data-boost="${k}"]`, v); if (!row) continue;
       const have = S.inv[BOOSTS[k].inv] || 0;
@@ -3660,16 +4068,25 @@ const Music = (function () {
       const soloUps = ev.filter(e => e.e === 'soloLevel');
       handleEvents(ev.filter(e => e.e === 'trainerLevel' || e.e === 'shiny'));
       const opened = GYMS.findIndex((x, i) => !wasOpen[i] && gymUnlocked(W, S, i));
-      const nextAce = Math.max(...gymTeam(gi, w.count).map(m => m.lvl));
+      const e2 = ngEntry(S, 'g', g.id);
+      const nextAce = Math.max(...gymTeam(gi, gymAt(S, gi)).map(m => m.lvl));
       vibe(60);
       setTimeout(() => {
+        const WPT = NGB.winsPerTier;
+        const tierLine = w.mastered && w.done ? `<p class="ngwin master">${CROWN} <b>${esc(g.leader)} ist gemeistert!</b> ${NGB.winsPerTier} Siege in NG+${NGB.maxTier}.</p>`
+          : w.done ? `<p class="ngwin"><b>${ngLabel(w.t)} geschafft!</b> ${w.t < NGB.maxTier ? 'Du kannst jetzt ' + ngLabel(w.t + 1) + ' freischalten oder hier weiterkämpfen.' : ''}</p>` : '';
         const el = openSheet(`<h2>Sieg gegen ${esc(g.leader)}!</h2>
           <div class="dexhead" style="margin:6px 0 4px"><span class="medal" style="--s:64px;--c:${TYPE_COL[g.type]}"><span>${gi - gymFirstIndex(g.r) + 1}</span></span>
-            <div><p style="margin:0">Du erhältst den <b>${esc(g.badge)}</b>${w.count > 1 ? ', jetzt ' + w.count + '×' : ''}.</p></div></div>
-          <div class="kv"><span>Belohnung</span><b>+${fInt(w.reward)} Coins</b><span>Einzeltraining</span><b>+${fRate(w.ep)} EP${soloUps.length ? ', jetzt Lv. ' + soloUps[soloUps.length - 1].lvl : ''}</b><span>Kampfdauer</span><b>${nf1.format(BT.t)} s</b><span>Revanche</span><b>Lv. ${nextAce}</b></div>
+            <div><p style="margin:0">Du erhältst den <b>${esc(g.badge)}</b>.</p>${starsHTML(e2.max)}</div></div>
+          ${tierLine}
+          <div class="kv"><span>Stufe</span><b>${ngLabel(w.t)} · ${Math.min(w.w, WPT)}/${WPT}</b><span>Belohnung</span><b>+${fInt(w.reward)} Coins${w.dia ? ` · <span class="dia-t">+${w.dia} ${GEM}</span>` : ''}</b><span>Einzeltraining</span><b>+${fRate(w.ep)} EP${soloUps.length ? ', jetzt Lv. ' + soloUps[soloUps.length - 1].lvl : ''}</b><span>Kampfdauer</span><b>${nf1.format(BT.t)} s</b><span>Nächster Kampf</span><b>Lv. ${nextAce}</b></div>
+          ${w.dia ? `<p class="fine" style="margin:6px 0 0">Erster Sieg in ${ngLabel(w.t)}: ${w.dia} Diamanten extra.</p>` : ''}
+          ${w.reduced ? '<p class="fine" style="margin:6px 0 0">Abgeschlossene Stufe: nur ein Viertel der EP und Coins.</p>' : ''}
           ${opened >= 0 ? `<p style="margin-top:8px">Neu freigeschaltet: <b>${esc(GYMS[opened].leader)}</b>.</p>` : ''}
-          <div class="row"><button class="btn gold" data-autofocus id="gw-ok" type="button">Weiter</button></div>`, { dismissible: false });
+          <div class="row">${ngCanAdvance(e2) ? `<button class="btn" id="gw-up" type="button">${ngLabel(e2.max + 1)} freischalten</button>` : ''}<button class="btn gold" data-autofocus id="gw-ok" type="button">Weiter</button></div>`, { dismissible: false });
         $('#gw-ok', el).onclick = () => { closeSheet(true); closeBattle(true); if (opened >= 0) arenaRegion = GYMS[opened].r; renderAll(); };
+        const up = $('#gw-up', el);
+        if (up) up.onclick = () => { if (ngAdvance(S, 'g', g.id)) { markDirty(); saveLocal(); toast(`${ngLabel(ngEntry(S, 'g', g.id).t)} freigeschaltet. ${g.leader} ist jetzt deutlich stärker.`); } closeSheet(true); closeBattle(true); renderAll(); };
       }, 450);
     } else {
       S.stats.gymLosses = (S.stats.gymLosses || 0) + 1;
@@ -3700,6 +4117,99 @@ const Music = (function () {
     setTimeout(releaseHeld, 0);
   }
 
+  // ---------- NG+ tiers and the Pokécenter (Patch 6) ----------
+  const NGB = BALANCE.ng;
+  const CROWN = '<svg class="crown" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8.5l4.6 3.8L12 5l4.4 7.3L21 8.5 19.2 19H4.8z" fill="currentColor"/></svg>';
+  // "NG+3 · 9/15", "Grundstufe · 4/15" or "Gemeistert"
+  function ngShort(e) {
+    if (ngMastered(e)) return 'Gemeistert';
+    return `${ngLabel(e.t)} · ${Math.min(ngWins(e, e.t), NGB.winsPerTier)}/${NGB.winsPerTier}`;
+  }
+  // badge collection: the highest tier reached and its wins, on two short lines
+  function ngBadge(e) {
+    if (ngMastered(e)) return 'Gemeistert';
+    return `${ngLabel(e.max)}<br>${Math.min(ngWins(e, e.max), NGB.winsPerTier)}/${NGB.winsPerTier}`;
+  }
+  function starsHTML(n) {
+    return `<span class="stars" aria-label="${n ? n + ' von ' + NGB.maxTier + ' NG+-Stufen erreicht' : 'noch keine NG+-Stufe'}">${'<i class="on">★</i>'.repeat(n)}${'<i>★</i>'.repeat(NGB.maxTier - n)}</span>`;
+  }
+  function fLeft(ms) { const sec = Math.ceil(ms / 1000); return sec < 60 ? sec + ' Sek.' : fTime(Math.ceil(sec / 60) * 60); }
+  function koStatus(id) { const left = koLeft(S, id); return left == null ? 'Kampfunfähig' : 'Pokécenter: noch ' + fLeft(left); }
+  // short form for the small tags in lists: "noch 1:59 Std.", "noch 25 Min." or "ungeheilt" (not in the Pokécenter yet)
+  function fLeftShort(ms) {
+    const sec = Math.ceil(ms / 1000); if (sec < 60) return sec + ' Sek.';
+    const m = Math.ceil(sec / 60); if (m < 60) return m + ' Min.';
+    return Math.floor(m / 60) + ':' + String(m % 60).padStart(2, '0') + ' Std.';
+  }
+  function koShort(id) { const left = koLeft(S, id); return left == null ? 'ungeheilt' : 'noch ' + fLeftShort(left); }
+  function koTag(id) { return isKO(S, id) ? `<span class="kotag"><b>K.O.</b><small data-kos="${id}">${esc(koShort(id))}</small></span>` : ''; }
+  // live countdowns: elements with data-kol="id" (long form) or data-kos="id" (short form) show the state of that Pokémon
+  function updateKoTimers() {
+    for (const el of document.querySelectorAll('[data-kol],[data-kos]')) {
+      const long = el.dataset.kol != null, id = +(long ? el.dataset.kol : el.dataset.kos);
+      const t = !isKO(S, id) ? 'Wieder fit' : long ? koStatus(id) : koShort(id);
+      if (el.textContent !== t) el.textContent = t;
+    }
+  }
+  let koSig = null;
+  function checkHeal() {
+    const healed = koHealDue(S);
+    if (healed.length) {
+      markDirty(); saveLocal();
+      toast(healed.length === 1 ? `${W.P[healed[0] - 1].name} ist im Pokécenter wieder fit geworden.` : `${healed.map(id => W.P[id - 1].name).join(', ')} sind im Pokécenter wieder fit geworden.`);
+    }
+    const sig = Object.keys(S.ko || {}).map(id => id + ':' + (S.ko[id].end ? 1 : 0)).join(',');
+    if (koSig !== null && sig !== koSig && tab === 'arena' && !BT) renderArena();
+    koSig = sig;
+    updateKoTimers();
+  }
+  // Pokécenter card in the arena: every knocked out Pokémon with its state
+  function centerCardHTML() {
+    const list = koList(S); if (!list.length) return '';
+    const waiting = list.filter(id => !S.ko[id].end).length;
+    return `<div class="card pcenter" id="pc-card">
+      <div class="pc-head"><h3>Pokécenter</h3><small>Kostenlos, ${fTime(BALANCE.heal.centerMin * 60)} pro Pokémon</small></div>
+      <div class="pc-list">${list.map(id => `<button class="pc-row" type="button" data-heal="${id}" aria-label="${esc(W.P[id - 1].name)}: ${esc(koStatus(id))}"><span class="pc-mon">${monHTML(id, 40, { emb: 0.8, shiny: !!S.shiny[id] })}</span><span class="pc-txt"><b>${esc(W.P[id - 1].name)}</b><small data-kol="${id}">${esc(koStatus(id))}</small></span><span class="pc-go">${S.ko[id].end ? 'Mehr' : 'Heilen'}</span></button>`).join('')}</div>
+      ${waiting > 1 ? `<div class="btnrow"><button class="btn small" id="pc-all" type="button">Alle ${waiting} ins Pokécenter</button></div>` : ''}
+    </div>`;
+  }
+  // Heal options for a knocked out Pokémon: Pokécenter (free), Verkürzte Wiederbelebung, revive potion.
+  function openHeal(id, after) {
+    const sp = W.P[id - 1], Hh = BALANCE.heal;
+    const el = openSheet('<div id="hl-body"></div>', { onClose: after });
+    const done = msg => { markDirty(); saveLocal(); if (msg) toast(msg); if (tab === 'arena' && !BT) renderArena(); };
+    const draw = () => {
+      if (!el.isConnected) return;
+      if (!isKO(S, id)) { closeSheet(); return; }
+      const k = S.ko[id], left = koLeft(S, id), q = S.inv.quickHeal || 0, rv = S.inv.revive || 0;
+      const canQuick = q > 0 && (!k.end || k.end - k.start > Hh.quickMin * 60e3);
+      $('#hl-body', el).innerHTML = `<h2>${esc(sp.name)} ist kampfunfähig</h2>
+        <div class="kohead"><span class="kh-mon">${monHTML(id, 72, { emb: 0.8, shiny: !!S.shiny[id] })}</span>
+          <p>${left == null ? 'Im Bosskampf besiegt. Es kann weder kämpfen noch im Einzeltraining leveln.' : `Im Pokécenter, wieder fit ${esc(fBack(k.end))}.<br><b data-kol="${id}">${esc(koStatus(id))}</b>`}</p></div>
+        <div class="healopts">
+          ${left == null ? `<button class="hopt" id="hl-center" type="button"><b>Ins Pokécenter</b><small>Kostenlos, wieder fit in ${fTime(Hh.centerMin * 60)}</small></button>` : ''}
+          ${canQuick ? `<button class="hopt" id="hl-quick" type="button"><b>Verkürzte Wiederbelebung</b><small>Pokécenter nur ${Hh.quickMin} Min. · ×${q} im Beutel</small></button>` : ''}
+          <button class="hopt dia" id="hl-revive" type="button"><b>Wiederbelebungstrank</b><small>${rv ? `Sofort fit · ×${rv} im Beutel` : `Sofort fit · ${fInt(Hh.revivePrice)} Diamanten`}</small></button>
+        </div>
+        ${q || left != null ? '' : '<p class="fine">Die Verkürzte Wiederbelebung (nur 30 Minuten im Pokécenter) gibt es manchmal bei der Trainer-Suche.</p>'}
+        <div class="row"><button class="btn ghost" id="hl-no" type="button">Schließen</button></div>`;
+      const c = $('#hl-center', el);
+      if (c) c.onclick = () => { if (koSend(S, id)) done(`${sp.name} ist im Pokécenter. Wieder fit ${fBack(S.ko[id].end)}.`); draw(); };
+      const qb = $('#hl-quick', el);
+      if (qb) qb.onclick = () => { if (koQuick(S, id)) done(`Verkürzte Wiederbelebung: ${sp.name} ist ${fBack(S.ko[id].end)} wieder fit.`); checkHeal(); draw(); };
+      $('#hl-revive', el).onclick = () => {
+        if (S.inv.revive > 0) { koRevive(S, id); done(`${sp.name} ist wieder fit.`); vibe(30); closeSheet(); return; }
+        confirmDiaSpend('Wiederbelebungstrank', Hh.revivePrice, () => {
+          if (!buyRevive(S) || !koRevive(S, id)) return;
+          done(`${sp.name} ist wieder fit.`); vibe(30);
+          if (curSheet && curSheet.veil.contains(el)) closeSheet();
+        });
+      };
+      $('#hl-no', el).onclick = () => closeSheet();
+    };
+    draw();
+  }
+
   // ---------- arena: separate leveling, gyms, badges ----------
   let arenaView = 'gyms', arenaRegion = null;
   // Opens on the first region that still has an open, unbeaten gym, otherwise on the current region.
@@ -3715,6 +4225,7 @@ const Music = (function () {
     const b = badgeCounts(S);
     v.innerHTML = `<h2 class="h2">Arena</h2>
       ${soloCardHTML()}
+      ${centerCardHTML()}
       <div class="seg" role="tablist" aria-label="Ansicht" style="margin-top:14px">
         <button type="button" role="tab" data-av="gyms" aria-selected="${String(arenaView === 'gyms')}">Arenaleiter</button>
         <button type="button" role="tab" data-av="bosses" aria-selected="${String(arenaView === 'bosses')}">Bosse</button>
@@ -3729,6 +4240,9 @@ const Music = (function () {
     }
     const pick = $('#s-pick') || $('#s-switch');
     if (pick) pick.onclick = openSoloPicker;
+    $$('[data-heal]', v).forEach(bt => bt.onclick = () => openHeal(+bt.dataset.heal));
+    const pcAll = $('#pc-all', v);
+    if (pcAll) pcAll.onclick = () => { const n = koList(S).filter(id => koSend(S, id)).length; markDirty(); saveLocal(); toast(`${n} Pokémon im Pokécenter. In ${fTime(BALANCE.heal.centerMin * 60)} sind sie wieder fit.`); renderArena(); };
     $$('[data-av]', v).forEach(bt => bt.onclick = () => { arenaView = bt.dataset.av; $$('[data-av]', v).forEach(x => x.setAttribute('aria-selected', String(x === bt))); renderArenaBody(); });
     renderArenaBody();
     updateSolo();
@@ -3740,11 +4254,11 @@ const Music = (function () {
     if (!S.solo.sel) {
       return `<div class="solo empty"><h3>Einzeltraining</h3><p>Wähle eins deiner gelevelten Pokémon und level es hier nur durch Tippen, unabhängig vom Hauptspiel. Mit ihm forderst du die Arenaleiter heraus. Ab Lv. ${BALANCE.solo.shinyLevel} bekommst du seine Shiny-Version.</p><button class="btn gold" id="s-pick" type="button">Pokémon wählen</button></div>`;
     }
-    const id = S.solo.sel, sp = W.P[id - 1], sh = !!S.shiny[id];
+    const id = S.solo.sel, sp = W.P[id - 1], sh = !!S.shiny[id], ko = isKO(S, id);
     return `<div class="solo">
       <div class="solo-top">
-        <button class="solo-stage ${sh ? 'shiny' : ''}" id="solo-stage" type="button" aria-label="${esc(sp.name)} im Einzeltraining trainieren" style="${bgVar(sp.types)}">
-          <span class="hint">Tippen</span>
+        <button class="solo-stage ${sh ? 'shiny' : ''} ${ko ? 'ko' : ''}" id="solo-stage" type="button" aria-label="${esc(sp.name)} ${ko ? 'ist kampfunfähig, Heilung' : 'im Einzeltraining trainieren'}" style="${bgVar(sp.types)}">
+          ${ko ? `<span class="ko-veil"><b>K.O.</b><small data-kos="${id}">${esc(koShort(id))}</small></span>` : '<span class="hint">Tippen</span>'}
           <span class="solo-vis"><span class="bob" id="s-bob">${monHTML(id, 104, { kind: 'anim', scale: 2, emb: 0.7, shiny: sh })}</span></span>
           <span class="floaters" id="s-fl"></span>
         </button>
@@ -3776,8 +4290,10 @@ const Music = (function () {
     $('#s-bar').classList.toggle('gold', L >= max || !!S.shiny[id]);
     $('#s-fill').style.width = (L >= max ? 100 : clamp(xp / need, 0, 1) * 100).toFixed(1) + '%';
     $('#s-xp').innerHTML = L >= max ? '<b>Maximallevel erreicht</b>' : `<b>${fRate(xp)}</b> / ${fRate(need)} EP`;
-    $('#s-tap').textContent = '+' + fRate(soloTapEp(S)) + ' EP pro Tipp';
-    $('#s-goal').innerHTML = soloGoal(id, L);
+    const ko = isKO(S, id);
+    $('#s-tap').textContent = ko ? 'Kampfunfähig' : '+' + fRate(soloTapEp(S)) + ' EP pro Tipp';
+    $('#s-goal').innerHTML = ko ? `<span>Kampfunfähig: kein Training, Boosts warten. <button class="linkbtn" type="button" data-heal="${id}">Heilen</button></span>` : soloGoal(id, L);
+    const hb = $('#s-goal [data-heal]'); if (hb) hb.onclick = () => openHeal(id);
     renderBoosts();
   }
   // boosts in the separate training: start buttons for what is in the bag, timers for running ones
@@ -3812,6 +4328,7 @@ const Music = (function () {
   let autoAcc = 0, autoRate = 17, autoFx = 0;
   function boostStep(dt) {
     if (!S.boost) return;
+    if (S.solo.sel && isKO(S, S.solo.sel)) return; // boosts wait while the Pokémon is knocked out
     if (S.boost.tap > 0) {
       S.boost.tap = Math.max(0, S.boost.tap - dt);
       if (S.boost.tap === 0) { markDirty(); toast('Der Tipp-Boost ist vorbei.'); }
@@ -3844,6 +4361,7 @@ const Music = (function () {
   let soloLast = 0;
   function tapSolo(e) {
     if (!S.solo.sel) return;
+    if (isKO(S, S.solo.sel)) { openHeal(S.solo.sel); return; }
     const now = performance.now();
     if (now - soloLast < 55) return;
     soloLast = now;
@@ -3883,17 +4401,17 @@ const Music = (function () {
     $$('[data-gym]', box).forEach(bt => bt.onclick = () => openPreGym(+bt.dataset.gym));
   }
   function gymRowHTML(g, gi) {
-    const open = gymUnlocked(W, S, gi), wins = gymWins(S, gi);
-    const ace = Math.max(...gymTeam(gi, wins).map(m => m.lvl));
+    const open = gymUnlocked(W, S, gi), wins = gymWins(S, gi), e = ngEntry(S, 'g', g.id), at = gymAt(S, gi);
+    const ace = Math.max(...gymTeam(gi, at).map(m => m.lvl));
     const k = gi - gymFirstIndex(g.r) + 1;
     let side;
     if (!open) side = `<b>Gesperrt</b><small>${k === 1 ? 'Ab ' + esc(W.R[g.r][0]) : 'Erst ' + esc(GYMS[gi - 1].leader) + ' besiegen'}</small>`;
-    else if (S.solo.sel) side = `<b>Lv. ${ace}</b>${diffChip(gymTapsNeeded(gymSetup(W, S, gi), 0, 1))}`;
+    else if (S.solo.sel) side = `<b>Lv. ${ace}</b>${isKO(S, S.solo.sel) ? '<span class="diff hard">K.O.</span>' : diffChip(gymTapsNeeded(gymSetup(W, S, gi), 0, 1))}`;
     else side = `<b>Lv. ${ace}</b><small class="${wins ? '' : 'go'}">${wins ? wins + '× besiegt' : 'Neu'}</small>`;
-    const winsNote = open && S.solo.sel && wins ? ' · ' + wins + '×' : '';
-    return `<button class="gym ${open ? '' : 'locked'} ${wins ? 'won' : ''}" type="button" data-gym="${gi}" ${open ? '' : 'disabled'} aria-label="${esc(g.leader)}, ${esc(g.badge)}${open ? '' : ', gesperrt'}">
+    const ngNote = open && (wins || e.max) ? ` · <span class="nw">${ngMastered(e) ? CROWN + ' Gemeistert' : esc(ngShort(e))}</span>` : '';
+    return `<button class="gym ${open ? '' : 'locked'} ${wins ? 'won' : ''} ${ngMastered(e) ? 'master' : ''}" type="button" data-gym="${gi}" ${open ? '' : 'disabled'} aria-label="${esc(g.leader)}, ${esc(g.badge)}${open ? (wins || e.max ? ', ' + esc(ngShort(e)) : '') : ', gesperrt'}">
       <span class="medal ${open ? '' : 'off'}" style="--c:${TYPE_COL[g.type]}">${open ? `<span>${k}</span>` : LOCK_SVG}</span>
-      <span class="gm"><b>${esc(g.leader)}</b><small>${esc(g.badge)} · ${esc(typeNames(gymTypes(g)))}${winsNote}</small></span>
+      <span class="gm"><b>${esc(g.leader)}</b><small>${esc(g.badge)} · ${esc(typeNames(gymTypes(g)))}${ngNote}</small></span>
       <span class="gs">${side}</span></button>`;
   }
   function badgesHTML() {
@@ -3901,77 +4419,154 @@ const Music = (function () {
     const out = W.R.map((R, r) => {
       const cells = GYMS.map((g, gi) => {
         if (g.r !== r) return '';
-        const w = gymWins(S, gi);
-        return `<div class="bdg ${w ? '' : 'off'}"><span class="medal ${w ? '' : 'off'}" style="--c:${TYPE_COL[g.type]}"><span>${gi - gymFirstIndex(r) + 1}</span></span><b>${esc(g.badge)}</b><small>${w}×</small></div>`;
+        const won = gymWins(S, gi) > 0, e = ngEntry(S, 'g', g.id), m = ngMastered(e);
+        return `<div class="bdg ${won ? '' : 'off'} ${m ? 'master' : ''}">${m ? `<span class="bcrown" aria-label="Gemeistert">${CROWN}</span>` : ''}<span class="medal ${won ? '' : 'off'}" style="--c:${TYPE_COL[g.type]}"><span>${gi - gymFirstIndex(r) + 1}</span></span><b>${esc(g.badge)}</b>${starsHTML(e.max)}<small>${won ? ngBadge(e) : 'offen'}</small></div>`;
       }).join('');
       return `<div class="sect">${esc(R[0])}</div><div class="badgegrid">${cells}</div>`;
     }).join('');
-    return out + `<p class="fine" style="margin-top:12px">Besiegte Arenaleiter: ${b.distinct} von ${GYMS.length} · Orden insgesamt: ${b.total}. Jeder Orden macht dein Einzeltraining schneller, jeder Sieg bringt deinem Pokémon dort zusätzliche EP.</p>`;
+    const bosses = BOSSES.map((x, bi) => {
+      const won = bossWins(S, bi) > 0, e = ngEntry(S, 'b', x.id), m = ngMastered(e), sp = W.P[x.mon - 1];
+      return `<div class="bdg boss ${won ? '' : 'off'} ${m ? 'master' : ''}">${m ? `<span class="bcrown" aria-label="Gemeistert">${CROWN}</span>` : ''}<span class="bossimg" ${won ? `style="${bgVar(sp.types)}"` : ''}>${monHTML(x.mon, 44, { emb: 0.82, mode: won ? 'reg' : 'unk' })}</span><b>${won ? esc(sp.name) : '???'}</b>${starsHTML(e.max)}<small>${won ? ngBadge(e) : 'offen'}</small></div>`;
+    }).join('');
+    return out + `<div class="sect">Bosse</div><div class="badgegrid">${bosses}</div>`
+      + `<p class="fine" style="margin-top:12px">Besiegte Arenaleiter: ${b.distinct} von ${GYMS.length} · Orden insgesamt: ${b.total} · gemeistert: ${ngMasteredCount(S)}. Jeder Stern steht für eine erreichte NG+-Stufe, die Krone für einen gemeisterten Gegner (${NGB.winsPerTier} Siege in NG+${NGB.maxTier}). Jeder Orden macht dein Einzeltraining schneller.</p>`;
   }
   function gymVerdict(G) {
     const p = S.inv.potion, x = S.inv.xatk > 0 ? 1 : 0;
     return verdictInfo(gymTapsNeeded(G, 0, 1), gymTapsNeeded(G, p, x ? BALANCE.items.xatk.mult : 1), itemsPhrase(p, x, false),
       'Level dein Pokémon im Einzeltraining weiter oder wähle eins mit Typvorteil.');
   }
+  // Tier box in the sheet before a gym or boss fight: step through the reached tiers, unlock the next one.
+  function ngBoxHTML(kind, id, rec, nextNote) {
+    const e = ngEntry(S, kind, id), t = e.t, w = ngWins(e, t), WPT = NGB.winsPerTier;
+    const mastered = ngMastered(e) && t === NGB.maxTier;
+    return `<div class="ngbox">
+      <div class="ngtop">
+        <button class="ngstep" type="button" data-ngs="-1" ${t > 0 ? '' : 'disabled'} aria-label="Niedrigere Stufe">‹</button>
+        <div class="ngcur"><b>${mastered ? CROWN + ' ' : ''}${ngLabel(t)}</b><small>${mastered ? 'Gemeistert' : Math.min(w, WPT) + ' / ' + WPT + ' Siege'}${t < e.max ? ' · abgeschlossen' : ''}</small></div>
+        <button class="ngstep" type="button" data-ngs="1" ${t < e.max ? '' : 'disabled'} aria-label="Höhere Stufe">›</button>
+      </div>
+      <div class="ngbar" role="progressbar" aria-label="Siege in dieser Stufe"><i style="width:${(Math.min(1, w / WPT) * 100).toFixed(1)}%"></i></div>
+      <div class="ngmeta">${starsHTML(e.max)}<span>${e.max ? 'Höchste Stufe: ' + ngLabel(e.max) : 'Nach ' + WPT + ' Siegen: NG+1'}</span></div>
+      <div class="ngrec">${rec}</div>
+      ${ngCanAdvance(e) ? `<button class="btn gold ngup" type="button" data-ngup>${ngLabel(e.max + 1)} freischalten</button>${nextNote ? `<p class="fine ngred">${nextNote}</p>` : ''}` : ''}
+      ${ngReduced(e, { t, w }) ? `<p class="fine ngred">Abgeschlossene Stufe: Siege bringen hier nur noch ein Viertel ${kind === 'b' ? 'der Diamanten und EP' : 'der EP und Coins'}.</p>` : ''}
+    </div>`;
+  }
+  function wireNgBox(box, kind, id, redraw) {
+    $$('[data-ngs]', box).forEach(b => b.onclick = () => {
+      const e = ngEntry(S, kind, id);
+      if (ngSelect(S, kind, id, e.t + +b.dataset.ngs)) { markDirty(); saveLocal(); redraw(); }
+    });
+    const up = $('[data-ngup]', box);
+    if (up) up.onclick = () => {
+      if (!ngAdvance(S, kind, id)) return;
+      markDirty(); saveLocal(); vibe(30);
+      toast(`${ngLabel(ngEntry(S, kind, id).t)} freigeschaltet. Die Gegner sind jetzt deutlich stärker.`);
+      redraw();
+    };
+  }
+  const fLv = L => (isFinite(L) ? 'Lv. ' + L : 'über Lv. 3000');
+  // Recommended level for a tier, in the colors of the difficulty: green from, yellow from, and where you are.
+  function recHTML(label, green, yellow, cur, cls) {
+    return `${esc(label)}: <b class="rec ok">grün ab ${fLv(green)}</b> · <span class="rec mid">gelb ab ${fLv(yellow)}</span><br><span class="diffdot ${cls}" aria-hidden="true"></span>${cur}`;
+  }
   function openPreGym(gi) {
     if (!gymUnlocked(W, S, gi)) return;
     if (!S.solo.sel) { toast('Wähle zuerst ein Pokémon fürs Einzeltraining.'); openSoloPicker(); return; }
-    const g = GYMS[gi], wins = gymWins(S, gi);
-    const G = gymSetup(W, S, gi);
-    preloadArt(...new Set(G.team.map(o => artFloor(o.sp.types, g.type))));
-    const adv = G.team.filter(o => o.pe >= 2).length, dis = G.team.filter(o => o.ee >= 2).length;
-    const reward = gymReward(W, S, gi, wins);
-    const team = G.team.map(o => `<div class="tm"><div class="tv">${monHTML(o.id, 56, { emb: 0.8 })}</div><b>${esc(o.sp.name)}</b><small>Lv. ${o.lvl}</small>${o.pe >= 2 ? '<div class="eff adv">Vorteil</div>' : o.ee >= 2 ? '<div class="eff dis">Gefahr</div>' : ''}</div>`).join('');
-    G.team.forEach(o => { S.seen[o.id] = 1; });
-    const el = openSheet(`<h2>${esc(g.leader)} herausfordern</h2>
-      <p class="subline">${esc(g.badge)} · Typ ${esc(typeNames(gymTypes(g)))} · ${wins ? (wins + 1) + '. Kampf' : 'Erster Kampf'}</p>
-      <div class="teamrow">${team}</div>
-      <div class="kv">
-        <span>Dein Pokémon</span><b>${esc(G.sp.name)} Lv. ${G.L}</b>
-        <span>Typvorteil</span><b>${adv ? 'gegen ' + adv + ' von ' + G.team.length : 'keiner'}${dis ? ' · Gefahr ' + dis + '×' : ''}</b>
-        <span>Deine KP</span><b>${fInt(G.maxHp)}</b>
-        <span>Belohnung</span><b>${esc(g.badge)} + ${fInt(reward)} Coins</b>
-        <span>Einzeltraining</span><b>+${fRate(gymSoloEp(W, S, gi, wins))} EP für ${esc(G.sp.name)}</b>
-      </div>
-      <div class="verdict" id="pg-verdict"></div>
-      ${itemRowsHTML('pg')}
-      <p class="fine" style="margin-top:10px">Du kämpfst allein gegen das ganze Team. Deine KP bleiben zwischen den Pokémon, wie sie sind.</p>
-      <div class="row"><button class="btn ghost" id="pg-no" type="button">Weiter trainieren</button><button class="btn fight" id="pg-go" type="button" style="animation:none">Kampf starten</button></div>`);
-    wireItemRows(el, 'pg', () => showVerdict($('#pg-verdict', el), gymVerdict(G)));
-    const go = $('#pg-go', el);
-    const tick = () => {
-      if (!go.isConnected) return;
-      const cool = Math.ceil((S.gymCool - Date.now()) / 1000);
-      go.disabled = cool > 0;
-      go.textContent = cool > 0 ? `Erholt sich noch ${cool} s` : 'Kampf starten';
-      if (cool > 0) setTimeout(tick, 500);
+    if (isKO(S, S.solo.sel)) { toast(`${W.P[S.solo.sel - 1].name} ist kampfunfähig. Heile es oder wähle ein anderes Pokémon.`); openHeal(S.solo.sel); return; }
+    const g = GYMS[gi], D = BALANCE.difficulty;
+    const el = openSheet('<div id="pg-body"></div>');
+    const draw = () => {
+      if (!el.isConnected) return;
+      const e = ngEntry(S, 'g', g.id), at = gymAt(S, gi);
+      const G = gymSetup(W, S, gi);
+      preloadArt(...new Set(G.team.map(o => artFloor(o.sp.types, g.type))));
+      const adv = G.team.filter(o => o.pe >= 2).length, dis = G.team.filter(o => o.ee >= 2).length;
+      const reward = gymReward(W, S, gi, at), ep = gymSoloEp(W, S, gi, at), dia = at.w === 0 ? gymFirstDia(gi, at.t) : 0;
+      const team = G.team.map(o => `<div class="tm"><div class="tv">${monHTML(o.id, 56, { emb: 0.8 })}</div><b>${esc(o.sp.name)}</b><small>Lv. ${o.lvl}</small>${o.pe >= 2 ? '<div class="eff adv">Vorteil</div>' : o.ee >= 2 ? '<div class="eff dis">Gefahr</div>' : ''}</div>`).join('');
+      G.team.forEach(o => { S.seen[o.id] = 1; });
+      const g2 = gymRecLevel(W, S, gi, at, G.id, D.easy), g4 = gymRecLevel(W, S, gi, at, G.id, D.medium);
+      const cls = diffClass(gymTapsNeeded(G, 0, 1));
+      const rec = recHTML(`Empfohlen für ${G.sp.name}`, g2, g4, `Dein ${esc(G.sp.name)}: Lv. ${G.L}`, cls);
+      $('#pg-body', el).innerHTML = `<h2>${esc(g.leader)} herausfordern</h2>
+        <p class="subline">${esc(g.badge)} · Typ ${esc(typeNames(gymTypes(g)))} · ${at.w ? (at.w + 1) + '. Kampf in ' + ngLabel(at.t) : 'Erster Kampf in ' + ngLabel(at.t)}</p>
+        ${ngBoxHTML('g', g.id, rec, ngCanAdvance(e) ? `In ${ngLabel(e.max + 1)} startet ${esc(g.leader)} mit Lv. ${Math.max(...gymTeam(gi, { t: e.max + 1, w: 0 }).map(m => m.lvl))}, jetzt Lv. ${Math.max(...G.team.map(o => o.lvl))}.` : '')}
+        <div class="teamrow">${team}</div>
+        <div class="kv">
+          <span>Dein Pokémon</span><b>${esc(G.sp.name)} Lv. ${G.L}</b>
+          <span>Typvorteil</span><b>${adv ? 'gegen ' + adv + ' von ' + G.team.length : 'keiner'}${dis ? ' · Gefahr ' + dis + '×' : ''}</b>
+          <span>Deine KP</span><b>${fInt(G.maxHp)}</b>
+          <span>Belohnung</span><b>${esc(g.badge)} + ${fInt(reward)} Coins${dia ? ` + <span class="dia-t">${dia} ${GEM}</span>` : ''}</b>
+          <span>Einzeltraining</span><b>+${fRate(ep)} EP für ${esc(G.sp.name)}</b>
+        </div>
+        ${dia ? `<p class="fine" style="margin:6px 0 0">Erster Sieg in ${ngLabel(at.t)}: einmalig ${dia} Diamanten extra.</p>` : ''}
+        <div class="verdict" id="pg-verdict"></div>
+        ${itemRowsHTML('pg')}
+        <p class="fine" style="margin-top:10px">Du kämpfst allein gegen das ganze Team. Deine KP bleiben zwischen den Pokémon, wie sie sind.</p>
+        <div class="row"><button class="btn ghost" id="pg-no" type="button">Weiter trainieren</button><button class="btn fight" id="pg-go" type="button" style="animation:none">Kampf starten</button></div>`;
+      wireNgBox(el, 'g', g.id, draw);
+      wireItemRows(el, 'pg', () => showVerdict($('#pg-verdict', el), gymVerdict(gymSetup(W, S, gi))));
+      const go = $('#pg-go', el);
+      const tick = () => {
+        if (!go.isConnected) return;
+        const cool = Math.ceil((S.gymCool - Date.now()) / 1000);
+        go.disabled = cool > 0;
+        go.textContent = cool > 0 ? `Erholt sich noch ${cool} s` : 'Kampf starten';
+        if (cool > 0) setTimeout(tick, 500);
+      };
+      tick();
+      $('#pg-no', el).onclick = () => closeSheet();
+      go.onclick = () => { if (Date.now() < S.gymCool) return; closeSheet(true); startGymBattle(gi); };
     };
-    tick();
-    $('#pg-no', el).onclick = () => closeSheet();
-    go.onclick = () => { if (Date.now() < S.gymCool) return; closeSheet(true); startGymBattle(gi); };
+    draw();
   }
+  const X_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>';
+  // Picker for the separate training: the head with X, name search and type filter stays visible while scrolling.
   function openSoloPicker() {
     const ids = Object.keys(S.reg).map(Number).sort((a, b) => a - b);
     if (!ids.length) { toast('Du hast noch kein Pokémon gelevelt.'); return; }
-    const trained = ids.filter(id => S.solo.lv[id]).sort((a, b) => soloLevel(S, b) - soloLevel(S, a));
+    const types = [...new Set(ids.flatMap(id => W.P[id - 1].types))].sort((a, b) => W.T[a].localeCompare(W.T[b], 'de'));
+    const el = openSheet(`<div class="pk-head">
+        <div class="pk-title"><h2>Pokémon fürs Einzeltraining</h2><button class="xbtn" id="pk-x" type="button" aria-label="Schließen">${X_SVG}</button></div>
+        <div class="pk-filter"><input type="search" id="pk-q" placeholder="Name suchen" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="search" aria-label="Pokémon nach Namen suchen"><select id="pk-type" aria-label="Nach Typ filtern"><option value="">Alle Typen</option>${types.map(t => `<option value="${t}">${esc(W.T[t])}</option>`).join('')}</select></div>
+        <p class="pk-count" id="pk-count"></p>
+      </div>
+      <div class="pk-scroll" id="pk-scroll"><div id="pk-list"></div>
+      <div class="row"><button class="btn" id="pk-close" type="button">Schließen</button></div></div>`, { cls: 'split' });
+    const norm = x => x.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
+    let q = '', ty = '';
     const cell = id => {
-      const sp = W.P[id - 1], sh = !!S.shiny[id], lv = S.solo.lv[id];
-      return `<button class="cell reg ${id === S.solo.sel ? 'now' : ''} ${sh ? 'shiny' : ''}" type="button" data-pick="${id}" style="--c:${TYPE_COL[sp.types[0]]}" aria-label="${esc(sp.name)}${lv ? ', Level ' + lv : ''}">
+      const sp = W.P[id - 1], sh = !!S.shiny[id], lv = S.solo.lv[id], ko = isKO(S, id);
+      return `<button class="cell reg ${id === S.solo.sel ? 'now' : ''} ${sh ? 'shiny' : ''} ${ko ? 'isko' : ''}" type="button" data-pick="${id}" style="--c:${TYPE_COL[sp.types[0]]}" aria-label="${esc(sp.name)}${lv ? ', Level ' + lv : ''}${ko ? ', ' + esc(koStatus(id)) : ''}">
         ${sh ? '<span class="sparkle" aria-hidden="true">✦</span>' : ''}
-        <div class="cv">${monHTML(id, 60, { emb: 0.78, shiny: sh })}</div><div class="cm">${esc(sp.name)}</div><div class="cl">${lv ? 'Lv. ' + lv : '#' + pad3(id)}</div></button>`;
+        <div class="cv">${monHTML(id, 60, { emb: 0.78, shiny: sh })}</div><div class="cm">${esc(sp.name)}</div><div class="cl">${lv ? 'Lv. ' + lv : '#' + pad3(id)}</div>${koTag(id)}</button>`;
     };
-    const el = openSheet(`<h2>Pokémon fürs Einzeltraining</h2>
-      <p>Wähle eins deiner ${ids.length} gelevelten Pokémon. Jedes behält seinen eigenen Fortschritt, du kannst jederzeit wechseln.</p>
-      ${trained.length ? `<h3>Schon trainiert</h3><div class="grid" style="margin-top:6px">${trained.map(cell).join('')}</div>` : ''}
-      <h3>Alle gelevelten Pokémon</h3><div class="grid" style="margin-top:6px">${ids.map(cell).join('')}</div>
-      <div class="row"><button class="btn" id="pk-close" type="button">Schließen</button></div>`);
-    $$('[data-pick]', el).forEach(bt => bt.onclick = () => {
-      soloSelect(S, +bt.dataset.pick); markDirty(); saveLocal();
-      closeSheet(true);
-      if (tab !== 'arena') setTab('arena'); else renderArena();
-      toast(`${W.P[S.solo.sel - 1].name} ist jetzt im Einzeltraining`);
-    });
+    const draw = () => {
+      const match = id => {
+        const sp = W.P[id - 1];
+        return (!q || norm(sp.name).includes(q) || pad3(id) === q.replace(/^#/, '').padStart(3, '0')) && (ty === '' || sp.types.includes(+ty));
+      };
+      const trained = ids.filter(id => S.solo.lv[id] && match(id)).sort((a, b) => soloLevel(S, b) - soloLevel(S, a) || a - b);
+      const rest = ids.filter(id => !S.solo.lv[id] && match(id));
+      const n = trained.length + rest.length;
+      $('#pk-count', el).textContent = q || ty ? `${n} von ${ids.length} Pokémon` : `${ids.length} gelevelte Pokémon. Jedes behält seinen eigenen Fortschritt, du kannst jederzeit wechseln.`;
+      $('#pk-list', el).innerHTML = (trained.length ? `<h3>Trainiert</h3><div class="grid" style="margin-top:6px">${trained.map(cell).join('')}</div>` : '')
+        + (rest.length ? `<h3>Noch nicht trainiert</h3><div class="grid" style="margin-top:6px">${rest.map(cell).join('')}</div>` : '')
+        + (n ? '' : '<p class="fine" style="margin-top:14px">Kein Pokémon passt zu deiner Suche.</p>');
+      $$('[data-pick]', el).forEach(bt => bt.onclick = () => {
+        soloSelect(S, +bt.dataset.pick); markDirty(); saveLocal();
+        closeSheet(true);
+        if (tab !== 'arena') setTab('arena'); else renderArena();
+        const sp = W.P[S.solo.sel - 1];
+        toast(isKO(S, S.solo.sel) ? `${sp.name} ist im Einzeltraining, aber kampfunfähig. Erst heilen, dann trainieren.` : `${sp.name} ist jetzt im Einzeltraining`);
+      });
+    };
+    $('#pk-q', el).addEventListener('input', e => { q = norm(e.target.value.trim()); draw(); $('#pk-scroll', el).scrollTop = 0; });
+    $('#pk-type', el).onchange = e => { ty = e.target.value; draw(); $('#pk-scroll', el).scrollTop = 0; };
+    $('#pk-x', el).onclick = () => closeSheet();
     $('#pk-close', el).onclick = () => closeSheet();
+    draw();
   }
 
   // ---------- bosses ----------
@@ -3987,22 +4582,24 @@ const Music = (function () {
     const B = BALANCE.bosses, elig = bossEligible(S);
     let best = null;
     for (const k in S.solo.lv) { const L = soloLevel(S, +k); if (S.reg[k] && (!best || L > best.L)) best = { id: +k, L }; }
-    const team = activeTeam(elig);
+    const team = activeTeam(elig), ready = bossReady(S, team);
     const rows = BOSSES.map((b, bi) => {
-      const open = bossUnlocked(W, S, bi), wins = bossWins(S, bi), sp = W.P[b.mon - 1];
-      const chip = open && team.length ? diffChip(bossTapsNeeded(bossSetup(W, S, bi, team), { potion: 0, xatk: 0 }, false)) : '';
+      const open = bossUnlocked(W, S, bi), wins = bossWins(S, bi), sp = W.P[b.mon - 1], e = ngEntry(S, 'b', b.id), at = bossAt(S, bi);
+      const chip = open && ready.length ? diffChip(bossTapsNeeded(bossSetup(W, S, bi, ready), { potion: 0, xatk: 0 }, false)) : open && team.length ? '<span class="diff hard">K.O.</span>' : '';
       const side = open
-        ? `<b>Lv. ${bossLevel(bi, wins)}</b><small class="dia-t">+${fInt(bossReward(bi, wins))} ${GEM}</small>${chip}`
+        ? `<b>Lv. ${bossLevel(bi, at)}</b><small class="dia-t">+${fInt(bossRewardFor(S, bi, at))} ${GEM}</small>${chip}`
         : `<b>Gesperrt</b><small>Ab ${esc(W.R[b.r][0])}</small>`;
-      return `<button class="gym boss ${open ? '' : 'locked'} ${wins ? 'won' : ''}" type="button" data-boss="${bi}" ${open ? '' : 'disabled'} aria-label="${esc(sp.name)}${open ? '' : ', gesperrt'}">
+      const ngNote = open && (wins || e.max) ? ` · <span class="nw">${ngMastered(e) ? CROWN + ' Gemeistert' : esc(ngShort(e))}</span>` : '';
+      return `<button class="gym boss ${open ? '' : 'locked'} ${wins ? 'won' : ''} ${ngMastered(e) ? 'master' : ''}" type="button" data-boss="${bi}" ${open ? '' : 'disabled'} aria-label="${esc(sp.name)}${open ? (wins || e.max ? ', ' + esc(ngShort(e)) : '') : ', gesperrt'}">
         <span class="bossimg" ${open ? `style="${bgVar(sp.types)}"` : ''}>${open ? monHTML(b.mon, 52, { emb: 0.82 }) : LOCK_SVG}</span>
-        <span class="gm"><b>${esc(sp.name)}</b><small>${esc(W.R[b.r][0])} · ${esc(typeNames(sp.types))}${wins ? ' · ' + wins + '× besiegt' : ''}</small></span>
+        <span class="gm"><b>${esc(sp.name)}</b><small>${esc(W.R[b.r][0])} · ${esc(typeNames(sp.types))}${ngNote}</small></span>
         <span class="gs">${side}</span></button>`;
     }).join('');
+    const kos = team.filter(id => isKO(S, id));
     const hint = elig.length
-      ? `<p class="fine" style="margin:10px 0 0">Bereit für Bosse (ab Lv. ${B.minLevel}): ${elig.slice(0, 4).map(id => esc(W.P[id - 1].name) + ' Lv. ' + soloLevel(S, id)).join(', ')}${elig.length > 4 ? ' und ' + (elig.length - 4) + ' weitere' : ''}.${team.length ? ` Die Einstufung gilt für Team ${S.bossTeamIdx + 1} (${team.map(id => esc(W.P[id - 1].name)).join(', ')}).` : ''}</p>`
+      ? `<p class="fine" style="margin:10px 0 0">Bereit für Bosse (ab Lv. ${B.minLevel}): ${elig.slice(0, 4).map(id => esc(W.P[id - 1].name) + ' Lv. ' + soloLevel(S, id)).join(', ')}${elig.length > 4 ? ' und ' + (elig.length - 4) + ' weitere' : ''}.${team.length ? ` Die Einstufung gilt für Team ${S.bossTeamIdx + 1} (${team.map(id => esc(W.P[id - 1].name)).join(', ')}).` : ''}${kos.length ? ` Kampfunfähig: ${kos.map(id => esc(W.P[id - 1].name)).join(', ')}.` : ''}</p>`
       : `<div class="tip" style="margin-top:10px">Bosse sind nur für starke Pokémon: Antreten dürfen Pokémon ab <b>Lv. ${B.minLevel}</b> aus dem Einzeltraining. ${best ? 'Dein stärkstes ist ' + esc(W.P[best.id - 1].name) + ' mit Lv. ' + best.L + '.' : 'Wähle oben ein Pokémon und trainiere es.'}</div>`;
-    return `<p class="lead" style="margin:12px 0 0">Legendäre Pokémon, sehr stark. Jeder Sieg bringt Diamanten, der erste doppelt. Mit jeder Revanche wird der Boss stärker.</p>${hint}<div class="gyms">${rows}</div>`;
+    return `<p class="lead" style="margin:12px 0 0">Legendäre Pokémon, sehr stark. Jeder Sieg bringt Diamanten und EP fürs Team, der erste Sieg einer Stufe doppelte Diamanten. Wer im Bosskampf besiegt wird, muss danach ins Pokécenter.</p>${hint}<div class="gyms">${rows}</div>`;
   }
   function bossRulesHTML(b, sp) {
     const B = BALANCE.bosses;
@@ -4015,29 +4612,136 @@ const Music = (function () {
     </ul>`;
   }
   function fClock(sec) { sec = Math.max(0, Math.ceil(sec)); return Math.floor(sec / 60) + ':' + pad2(sec % 60); }
+  // Drag and drop for touch and mouse. Touch: hold briefly without moving, then drag (moving earlier scrolls as usual).
+  // Mouse and pen: drag after a few pixels. A short tap stays a normal click.
+  // opts.source(el) -> data or null for an element with data-dsrc; opts.over(x, y, data) -> drop target (and highlights);
+  // opts.drop(data, target).
+  function dragDrop(root, opts) {
+    const LONG = 230, SLOP = 9, MSLOP = 5;
+    let st = null, suppress = false, raf = 0;
+    const scroller = () => root.closest('.sheet') || document.scrollingElement;
+    // the ghost lives absolutely positioned in the body (like all overlays), so body offsets are subtracted
+    const place = () => { if (st && st.ghost) st.ghost.style.transform = `translate(${Math.round(st.x - st.bx - 38)}px, ${Math.round(st.y - st.by - 64)}px)`; };
+    const autoScroll = () => {
+      if (!st || !st.active) return;
+      const sc = scroller(), r = sc.getBoundingClientRect(), edge = 64;
+      let dy = 0;
+      if (st.y < r.top + edge) dy = -Math.ceil((r.top + edge - st.y) / 5);
+      else if (st.y > r.bottom - edge) dy = Math.ceil((st.y - (r.bottom - edge)) / 5);
+      if (dy) { sc.scrollTop += dy; st.tgt = opts.over(st.x, st.y, st.data); }
+      raf = requestAnimationFrame(autoScroll);
+    };
+    const start = () => {
+      st.active = true;
+      const g = document.createElement('div');
+      g.className = 'dnd-ghost';
+      const v = st.el.querySelector('.cv, .sv'), n = st.el.querySelector('.cm, b');
+      g.innerHTML = (v ? `<div class="gv">${v.innerHTML}</div>` : '') + (n ? `<b>${esc(n.textContent)}</b>` : '');
+      document.body.appendChild(g);
+      const br = document.body.getBoundingClientRect();
+      st.bx = br.left; st.by = br.top;
+      st.ghost = g;
+      st.el.classList.add('dragging');
+      document.body.classList.add('dnd-on');
+      place();
+      vibe(15);
+      st.tgt = opts.over(st.x, st.y, st.data);
+      autoScroll();
+    };
+    const move = (x, y) => { st.x = x; st.y = y; place(); st.tgt = opts.over(x, y, st.data); };
+    const finish = cancel => {
+      if (!st) return;
+      clearTimeout(st.timer); cancelAnimationFrame(raf);
+      const was = st; st = null;
+      if (!was.active) return;
+      was.el.classList.remove('dragging');
+      document.body.classList.remove('dnd-on');
+      if (was.ghost) was.ghost.remove();
+      opts.over(-1, -1, null);
+      if (cancel) return;
+      // the click the browser may still send after releasing must not also tap the element
+      suppress = true; setTimeout(() => { suppress = false; }, 350);
+      opts.drop(was.data, was.tgt);
+    };
+    root.addEventListener('touchstart', e => {
+      if (e.touches.length !== 1) { finish(true); return; }
+      const el = e.target.closest && e.target.closest('[data-dsrc]');
+      if (!el || !root.contains(el)) return;
+      const data = opts.source(el); if (!data) return;
+      const t = e.touches[0];
+      st = { el, data, x: t.clientX, y: t.clientY, x0: t.clientX, y0: t.clientY, active: false, touch: true };
+      st.timer = setTimeout(() => { if (st && !st.active) start(); }, LONG);
+    }, { passive: true });
+    root.addEventListener('touchmove', e => {
+      if (!st || !st.touch) return;
+      const t = e.touches[0];
+      if (st.active) { e.preventDefault(); move(t.clientX, t.clientY); return; }
+      if (Math.hypot(t.clientX - st.x0, t.clientY - st.y0) > SLOP) { clearTimeout(st.timer); st = null; }
+    }, { passive: false });
+    root.addEventListener('touchend', e => { if (st && st.touch) { if (st.active && e.cancelable) e.preventDefault(); finish(false); } });
+    root.addEventListener('touchcancel', () => finish(true));
+    root.addEventListener('contextmenu', e => { if (e.target.closest && e.target.closest('[data-dsrc]')) e.preventDefault(); });
+    root.addEventListener('pointerdown', e => {
+      if (e.pointerType === 'touch' || e.button > 0) return;
+      const el = e.target.closest && e.target.closest('[data-dsrc]'); if (!el || !root.contains(el)) return;
+      const data = opts.source(el); if (!data) return;
+      st = { el, data, x: e.clientX, y: e.clientY, x0: e.clientX, y0: e.clientY, active: false, touch: false };
+      const mv = ev => {
+        if (!st) return;
+        if (!st.active && Math.hypot(ev.clientX - st.x0, ev.clientY - st.y0) > MSLOP) { st.x = ev.clientX; st.y = ev.clientY; start(); }
+        if (st && st.active) move(ev.clientX, ev.clientY);
+      };
+      const up = ev => { window.removeEventListener('pointermove', mv); window.removeEventListener('pointerup', up); window.removeEventListener('pointercancel', up); finish(ev.type === 'pointercancel'); };
+      window.addEventListener('pointermove', mv); window.addEventListener('pointerup', up); window.addEventListener('pointercancel', up);
+    });
+    root.addEventListener('click', e => { if (suppress) { e.stopPropagation(); e.preventDefault(); suppress = false; } }, true);
+  }
   function openPreBoss(bi) {
     if (!bossUnlocked(W, S, bi)) return;
-    const b = BOSSES[bi], sp = W.P[b.mon - 1], B = BALANCE.bosses, wins = bossWins(S, bi);
+    const b = BOSSES[bi], sp = W.P[b.mon - 1], B = BALANCE.bosses, D = BALANCE.difficulty;
     const elig = bossEligible(S);
     let team = activeTeam(elig);
     S.seen[b.mon] = 1;
     preloadArt(artBg(sp.types), artFloor(sp.types));
-    const L = bossLevel(bi, wins), bst = monStats(sp, L);
-    const el = openSheet(`<h2>Boss: ${esc(sp.name)}</h2>
-      <p class="subline">${esc(W.R[b.r][0])} · ${esc(typeNames(sp.types))} · ${wins ? (wins + 1) + '. Kampf' : 'Erster Kampf'}</p>
-      <div class="bosshead"><div class="big" style="${bgVar(sp.types)}">${monHTML(b.mon, 104, { kind: 'anim', scale: 1.7, emb: 0.8 })}</div>
-        <div class="kv"><span>Level</span><b>${L}</b><span>KP</span><b>${fInt(bst.hp * B.hpMult)}</b><span>Großangriff</span><b>${esc(b.move)}</b><span>Belohnung</span><b class="dia-t">+${fInt(bossReward(bi, wins))} ${GEM}</b></div></div>
-      <h3>Dein Team <small class="muted">bis zu ${B.teamMax}, in dieser Reihenfolge</small></h3>
-      <div class="seg teamtabs" id="bb-tabs" role="tablist" aria-label="Gespeicherte Teams"></div>
-      <div class="teamslots" id="bb-team"></div>
-      <h3>Pokémon ab Lv. ${B.minLevel}</h3>
-      <div class="grid" id="bb-pool" style="margin-top:6px"></div>
-      <div class="verdict" id="bb-verdict"></div>
-      ${itemRowsHTML('bb')}
-      <details class="rules-box"><summary>So kämpft ${esc(sp.name)}</summary>${bossRulesHTML(b, sp)}</details>
-      <div class="row"><button class="btn ghost" id="bb-no" type="button">Zurück</button><button class="btn fight" id="bb-go" type="button" style="animation:none">Kampf starten</button></div>`);
-    const go = $('#bb-go', el);
+    const el = openSheet('<div id="bb-body"></div>');
+    const body = $('#bb-body', el);
+    const save = () => { S.bossTeams[S.bossTeamIdx] = team.slice(); markDirty(); };
+    let go = null;
+    const tick = () => {
+      if (!go || !go.isConnected) return;
+      const cool = Math.ceil((S.bossCool - Date.now()) / 1000), ready = bossReady(S, team);
+      go.disabled = !ready.length || cool > 0;
+      go.textContent = cool > 0 ? `Erholt sich noch ${cool} s` : 'Kampf starten';
+      if (cool > 0) setTimeout(tick, 500);
+    };
+    // recommended level for the members that can fight (all of them while everybody is knocked out)
+    const recText = () => {
+      if (!team.length) return 'Empfohlenes Team-Level: Stell zuerst ein Team zusammen.';
+      const ready = bossReady(S, team), at = bossAt(S, bi), base = ready.length ? ready : team;
+      const g2 = bossRecLevel(W, S, bi, at, base, D.easy), g4 = bossRecLevel(W, S, bi, at, base, D.medium);
+      const avg = Math.round(base.reduce((a, id) => a + soloLevel(S, id), 0) / base.length);
+      const cls = ready.length ? diffClass(bossTapsNeeded(bossSetup(W, S, bi, ready), { potion: 0, xatk: 0 }, false)) : 'hard';
+      const cur = !ready.length ? `Dein Team ist kampfunfähig (im Schnitt Lv. ${avg})` : base.length > 1 ? `Dein Team: im Schnitt Lv. ${avg}` : `Dein Pokémon: Lv. ${avg}`;
+      return recHTML('Empfohlenes Team-Level', g2, g4, cur, cls);
+    };
+    const verdict = () => {
+      const box = $('#bb-verdict', el); if (!box) return;
+      const ready = bossReady(S, team), kos = team.filter(id => isKO(S, id));
+      if (!team.length) { box.className = 'verdict'; box.textContent = elig.length ? `Team ${S.bossTeamIdx + 1} ist noch leer. Zieh Pokémon in die Plätze oder tippe sie an.` : `Dir fehlt ein Pokémon ab Lv. ${B.minLevel}.`; tick(); return; }
+      if (!ready.length) { box.className = 'verdict hard'; box.textContent = `Alle Pokémon in Team ${S.bossTeamIdx + 1} sind kampfunfähig. Heile sie im Pokécenter oder stell ein anderes Team zusammen.`; tick(); return; }
+      const G = bossSetup(W, S, bi, ready);
+      const pots = Math.min(B.potionsPerFight, S.inv.potion), xs = Math.min(B.xatkPerFight, S.inv.xatk);
+      const t0 = bossTapsNeeded(G, { potion: 0, xatk: 0 }, false);
+      const ti = pots || xs ? bossTapsNeeded(G, { potion: pots, xatk: xs }, true) : t0;
+      showVerdict(box, verdictInfo(t0, ti, itemsPhrase(pots, xs, true),
+        'Level dein Team im Einzeltraining weiter, nimm Pokémon mit Typvorteil mit oder kauf Supertränke und X-Angriffe.',
+        'Gilt, wenn du sie im richtigen Moment einsetzt.', ready.length > 1 ? 'Dein Team' : 'Dein Pokémon'));
+      if (kos.length) box.insertAdjacentHTML('beforeend', `<p class="fine" style="margin:6px 0 0">Kampfunfähig und nicht dabei: ${kos.map(id => esc(W.P[id - 1].name)).join(', ')}.</p>`);
+      tick();
+    };
     const draw = () => {
+      if (!el.isConnected) return;
+      $('#bb-ng-rec', el).innerHTML = recText();
       $('#bb-tabs', el).innerHTML = [0, 1, 2].map(i => {
         const n = (i === S.bossTeamIdx ? team : S.bossTeams[i].filter(id => elig.includes(id))).length;
         return `<button type="button" role="tab" data-tt="${i}" aria-selected="${String(i === S.bossTeamIdx)}">Team ${i + 1}<small class="num">${n ? n + '×' : 'leer'}</small></button>`;
@@ -4051,14 +4755,14 @@ const Music = (function () {
       const slots = [];
       for (let i = 0; i < B.teamMax; i++) {
         const id = team[i];
-        if (!id) { slots.push(`<span class="slot empty" aria-hidden="true">${i + 1}</span>`); continue; }
-        const m = W.P[id - 1], pe = gymEff(W, m.types, sp.types), ee = gymEff(W, sp.types, m.types);
-        slots.push(`<button class="slot" type="button" data-rm="${id}" aria-label="${esc(m.name)} aus dem Team nehmen"><span class="sv">${monHTML(id, 48, { emb: 0.8, shiny: !!S.shiny[id] })}</span><b>${esc(m.name)}</b><small>Lv. ${soloLevel(S, id)}</small>${pe >= 2 ? '<span class="eff adv">Vorteil</span>' : ee >= 2 ? '<span class="eff dis">Gefahr</span>' : ''}</button>`);
+        if (!id) { slots.push(`<span class="slot empty" data-slot="${i}" aria-hidden="true">${i + 1}</span>`); continue; }
+        const m = W.P[id - 1], pe = gymEff(W, m.types, sp.types), ee = gymEff(W, sp.types, m.types), ko = isKO(S, id);
+        slots.push(`<button class="slot ${ko ? 'isko' : ''}" type="button" data-rm="${id}" data-slot="${i}" data-dsrc="slot" aria-label="${esc(m.name)}${ko ? ', kampfunfähig' : ''}, Platz ${i + 1}. Antippen nimmt es aus dem Team."><span class="sv">${monHTML(id, 48, { emb: 0.8, shiny: !!S.shiny[id] })}</span><b>${esc(m.name)}</b><small>Lv. ${soloLevel(S, id)}</small>${ko ? koTag(id) : pe >= 2 ? '<span class="eff adv">Vorteil</span>' : ee >= 2 ? '<span class="eff dis">Gefahr</span>' : ''}</button>`);
       }
       $('#bb-team', el).innerHTML = slots.join('');
       $('#bb-pool', el).innerHTML = elig.length ? elig.map(id => {
-        const m = W.P[id - 1], on = team.includes(id), sh = !!S.shiny[id];
-        return `<button class="cell reg ${on ? 'now' : ''} ${sh ? 'shiny' : ''}" type="button" data-add="${id}" aria-pressed="${String(on)}" style="--c:${TYPE_COL[m.types[0]]}">${sh ? '<span class="sparkle" aria-hidden="true">✦</span>' : ''}<div class="cv">${monHTML(id, 56, { emb: 0.78, shiny: sh })}</div><div class="cm">${esc(m.name)}</div><div class="cl">Lv. ${soloLevel(S, id)}</div></button>`;
+        const m = W.P[id - 1], on = team.includes(id), sh = !!S.shiny[id], ko = isKO(S, id);
+        return `<button class="cell reg ${on ? 'now' : ''} ${sh ? 'shiny' : ''} ${ko ? 'isko' : ''}" type="button" data-add="${id}" data-dsrc="pool" aria-pressed="${String(on)}" aria-label="${esc(m.name)}, Level ${soloLevel(S, id)}${ko ? ', kampfunfähig' : ''}" style="--c:${TYPE_COL[m.types[0]]}">${sh ? '<span class="sparkle" aria-hidden="true">✦</span>' : ''}<div class="cv">${monHTML(id, 56, { emb: 0.78, shiny: sh })}</div><div class="cm">${esc(m.name)}</div><div class="cl">Lv. ${soloLevel(S, id)}</div>${koTag(id)}</button>`;
       }).join('') : `<p class="fine" style="grid-column:1/-1">Noch kein Pokémon ab Lv. ${B.minLevel}. Trainiere eins im Einzeltraining.</p>`;
       $$('[data-rm]', el).forEach(bt => bt.onclick = () => { team = team.filter(x => x !== +bt.dataset.rm); save(); draw(); });
       $$('[data-add]', el).forEach(bt => bt.onclick = () => {
@@ -4070,30 +4774,68 @@ const Music = (function () {
       });
       verdict();
     };
-    const save = () => { S.bossTeams[S.bossTeamIdx] = team.slice(); markDirty(); };
-    const verdict = () => {
-      const box = $('#bb-verdict', el);
-      if (!team.length) { box.className = 'verdict'; box.textContent = elig.length ? `Team ${S.bossTeamIdx + 1} ist noch leer. Tippe unten Pokémon an, um es zusammenzustellen.` : `Dir fehlt ein Pokémon ab Lv. ${B.minLevel}.`; go.disabled = true; return; }
-      const G = bossSetup(W, S, bi, team);
-      const pots = Math.min(B.potionsPerFight, S.inv.potion), xs = Math.min(B.xatkPerFight, S.inv.xatk);
-      const t0 = bossTapsNeeded(G, { potion: 0, xatk: 0 }, false);
-      const ti = pots || xs ? bossTapsNeeded(G, { potion: pots, xatk: xs }, true) : t0;
-      showVerdict(box, verdictInfo(t0, ti, itemsPhrase(pots, xs, true),
-        'Level dein Team im Einzeltraining weiter, nimm Pokémon mit Typvorteil mit oder kauf Supertränke und X-Angriffe.',
-        'Gilt, wenn du sie im richtigen Moment einsetzt.', team.length > 1 ? 'Dein Team' : 'Dein Pokémon'));
-      tick();
+    // drop: from the pool onto a place (insert, or replace when the team is full), between places (reorder),
+    // from a place back to the pool or outside (remove)
+    const drop = (src, tgt) => {
+      const t = team.slice();
+      if (src.from === 'slot') {
+        const id = t[src.idx]; if (id == null) return;
+        t.splice(src.idx, 1);
+        if (tgt && tgt.to === 'slot') t.splice(Math.min(tgt.idx, t.length), 0, id);
+      } else {
+        if (!tgt || tgt.to !== 'slot') return;
+        const j = t.indexOf(src.id);
+        if (j >= 0) { t.splice(j, 1); t.splice(Math.min(tgt.idx, t.length), 0, src.id); }
+        else if (t.length < B.teamMax) t.splice(Math.min(tgt.idx, t.length), 0, src.id);
+        else t[Math.min(tgt.idx, t.length - 1)] = src.id;
+      }
+      team = t; save(); vibe(10); draw();
     };
-    const tick = () => {
-      if (!go.isConnected) return;
-      const cool = Math.ceil((S.bossCool - Date.now()) / 1000);
-      go.disabled = !team.length || cool > 0;
-      go.textContent = cool > 0 ? `Erholt sich noch ${cool} s` : 'Kampf starten';
-      if (cool > 0) setTimeout(tick, 500);
+    const over = (x, y, data) => {
+      $$('.slot.over', el).forEach(n => n.classList.remove('over'));
+      const pool = $('#bb-pool', el); if (pool) pool.classList.remove('drop-out');
+      if (!data) return null;
+      const hit = document.elementFromPoint(x, y);
+      const slot = hit && hit.closest && hit.closest('[data-slot]');
+      if (slot && el.contains(slot)) { slot.classList.add('over'); return { to: 'slot', idx: +slot.dataset.slot }; }
+      if (data.from === 'slot') { if (pool) pool.classList.add('drop-out'); return { to: 'pool' }; }
+      return null;
     };
-    wireItemRows(el, 'bb', () => { if ($('#bb-verdict', el)) verdict(); });
-    draw();
-    $('#bb-no', el).onclick = () => closeSheet();
-    go.onclick = () => { if (!team.length || Date.now() < S.bossCool) return; save(); saveLocal(); closeSheet(true); beginBoss(bi, team.slice()); };
+    const drawAll = () => {
+      if (!el.isConnected) return;
+      const at = bossAt(S, bi), L = bossLevel(bi, at), bst = monStats(sp, L);
+      body.innerHTML = `<h2>Boss: ${esc(sp.name)}</h2>
+        <p class="subline">${esc(W.R[b.r][0])} · ${esc(typeNames(sp.types))} · ${at.w ? (at.w + 1) + '. Kampf in ' + ngLabel(at.t) : 'Erster Kampf in ' + ngLabel(at.t)}</p>
+        <div class="bosshead"><div class="big" style="${bgVar(sp.types)}">${monHTML(b.mon, 104, { kind: 'anim', scale: 1.7, emb: 0.8 })}</div>
+          <div class="kv"><span>Level</span><b>${L}</b><span>KP</span><b>${fInt(bst.hp * B.hpMult)}</b><span>Großangriff</span><b>${esc(b.move)}</b><span>Belohnung</span><b class="dia-t">+${fInt(bossRewardFor(S, bi, at))} ${GEM}</b></div></div>
+        ${ngBoxHTML('b', b.id, '<span id="bb-ng-rec"></span>', ngCanAdvance(ngEntry(S, 'b', b.id)) ? `In ${ngLabel(ngEntry(S, 'b', b.id).max + 1)} startet ${esc(sp.name)} mit Lv. ${bossLevel(bi, { t: ngEntry(S, 'b', b.id).max + 1, w: 0 })}, jetzt Lv. ${L}.` : '')}
+        <h3>Dein Team <small class="muted">bis zu ${B.teamMax}, in dieser Reihenfolge</small></h3>
+        <div class="seg teamtabs" id="bb-tabs" role="tablist" aria-label="Gespeicherte Teams"></div>
+        <div class="teamslots" id="bb-team"></div>
+        <p class="fine dndhint">Ziehen zum Einsetzen und Umstellen, am Handy erst kurz gedrückt halten. Aus dem Team ziehen oder antippen nimmt es heraus.</p>
+        <h3>Pokémon ab Lv. ${B.minLevel}</h3>
+        <div class="grid" id="bb-pool" data-pool style="margin-top:6px"></div>
+        <div class="verdict" id="bb-verdict"></div>
+        <p class="fine" style="margin:8px 0 0">Nach einem Sieg bekommen alle Pokémon EP, die gekämpft haben und noch stehen. Wer besiegt wird, ist danach kampfunfähig und muss ins Pokécenter.</p>
+        ${itemRowsHTML('bb')}
+        <details class="rules-box"><summary>So kämpft ${esc(sp.name)}</summary>${bossRulesHTML(b, sp)}</details>
+        <div class="row"><button class="btn ghost" id="bb-no" type="button">Zurück</button><button class="btn fight" id="bb-go" type="button" style="animation:none">Kampf starten</button></div>`;
+      go = $('#bb-go', el);
+      wireNgBox(el, 'b', b.id, drawAll);
+      wireItemRows(el, 'bb', () => verdict());
+      $('#bb-no', el).onclick = () => closeSheet();
+      go.onclick = () => {
+        const ready = bossReady(S, team);
+        if (!ready.length || Date.now() < S.bossCool) return;
+        save(); saveLocal(); closeSheet(true); beginBoss(bi, ready);
+      };
+      draw();
+    };
+    dragDrop(body, {
+      source: n => (n.dataset.dsrc === 'slot' ? { from: 'slot', idx: +n.dataset.slot } : n.dataset.dsrc === 'pool' ? { from: 'pool', id: +n.dataset.add } : null),
+      over, drop,
+    });
+    drawAll();
   }
   function beginBoss(bi, team) {
     const b = BOSSES[bi], sp = W.P[b.mon - 1];
@@ -4131,8 +4873,9 @@ const Music = (function () {
     $('#b-flee').onclick = () => {
       if (!BT || BT.over) return;
       BT.over = true; bossRecord(S, BT.F); markDirty(); saveLocal();
+      const kos = BT.F.G.members.filter((m, i) => BT.F.mhp[i] <= 0).map(m => m.sp.name);
       closeBattle();
-      toast('Du hast aufgegeben. Trainiere weiter und fordere den Boss erneut heraus.');
+      toast('Du hast aufgegeben.' + (kos.length ? ` Kampfunfähig: ${kos.join(', ')}. Heilen kannst du sie im Pokécenter unter Arena.` : ' Trainiere weiter und fordere den Boss erneut heraus.'));
     };
     bossUI();
     setTimeout(() => { const n = $('#b-note'); if (n) n.style.opacity = '0'; }, 3500);
@@ -4189,7 +4932,7 @@ const Music = (function () {
       else if (e.e === 'shieldEnd') blog('Der Schutzschild ist weg!');
       else if (e.e === 'heal') { bfloat('+' + fInt(e.d), 'heal', 'p'); blog(`Supertrank! ${m.sp.name} ist wieder fitter.`); }
       else if (e.e === 'xatk') blog(`X-Angriff! ${B.xatkTime} Sekunden lang mehr Schaden.`);
-      else if (e.e === 'faint') blog(`${F.G.members[e.idx].sp.name} ist besiegt!`);
+      else if (e.e === 'faint') { const m2 = F.G.members[e.idx]; koMark(S, m2.id); markDirty(); blog(`${m2.sp.name} ist besiegt und kampfunfähig!`); }
       else if (e.e === 'swap') { blog(`${F.G.members[e.idx].sp.name} kommt in den Kampf!`); vibe(30); }
       else if (e.e === 'swapIn') renderBossMember();
       else if (e.e === 'end') { bossUI(); endBoss(e.won, !!e.timeout); return; }
@@ -4228,26 +4971,53 @@ const Music = (function () {
     $('#b-pot').disabled = F.potions <= 0 || F.potCd > 0 || F.over || F.swapT > 0 || F.mhp[F.idx] >= m.maxHp;
     $('#b-x').disabled = F.xatks <= 0 || F.xT > 0 || F.over || F.swapT > 0;
   }
+  // knocked out members of the fight that just ended, with a button for the Pokécenter
+  function koBoxHTML(ids) {
+    if (!ids.length) return '';
+    return `<div class="kobox"><p><b>Kampfunfähig:</b> ${ids.map(id => esc(W.P[id - 1].name)).join(', ')}. ${ids.length > 1 ? 'Sie können' : 'Es kann'} erst nach der Heilung wieder kämpfen und im Einzeltraining leveln.</p>
+      <div class="btnrow"><button class="btn small" type="button" data-kocenter>${ids.length > 1 ? 'Alle ins Pokécenter' : 'Ins Pokécenter'} (${fTime(BALANCE.heal.centerMin * 60)})</button></div></div>`;
+  }
+  function wireKoBox(el, ids) {
+    const b = $('[data-kocenter]', el); if (!b) return;
+    b.onclick = () => {
+      const n = ids.filter(id => koSend(S, id)).length;
+      markDirty(); saveLocal();
+      b.disabled = true; b.textContent = n ? `Im Pokécenter, wieder fit ${fBack(Date.now() + BALANCE.heal.centerMin * 60e3)}` : 'Schon im Pokécenter';
+    };
+  }
   function endBoss(won, timeout) {
     if (!BT || BT.over) return;
     BT.over = true;
     const F = BT.F, bi = BT.bi, b = BT.b, sp = BT.sp;
     bossRecord(S, F);
+    const kos = F.G.members.filter((m, i) => F.mhp[i] <= 0).map(m => m.id);
+    for (const id of kos) if (!isKO(S, id)) koMark(S, id);
     if (won) Music.victory(); else Music.mode('silent');
     if (won) {
       const ev = bossWin(W, S, bi, F);
-      const w = ev[0];
+      const w = ev.find(x => x.e === 'bossWin');
+      handleEvents(ev.filter(x => x.e === 'shiny'));
       markDirty(); saveLocal();
       vibe(80);
       const gr = gateRegion(W, S), canBuy = gr >= 0 && S.dia >= regionPrice(gr);
+      const e2 = ngEntry(S, 'b', b.id), WPT = NGB.winsPerTier;
       setTimeout(() => {
+        const tierLine = w.mastered && w.done ? `<p class="ngwin master">${CROWN} <b>${esc(sp.name)} ist gemeistert!</b> ${NGB.winsPerTier} Siege in NG+${NGB.maxTier}.</p>`
+          : w.done ? `<p class="ngwin"><b>${ngLabel(w.t)} geschafft!</b> ${w.t < NGB.maxTier ? 'Du kannst jetzt ' + ngLabel(w.t + 1) + ' freischalten oder hier weiterkämpfen.' : ''}</p>` : '';
+        const eps = w.eps.length ? `<h3>EP für dein Team</h3><div class="kv">${w.eps.map(x => `<span>${esc(W.P[x.id - 1].name)}</span><b>+${fRate(x.ep)} EP${x.to > x.from ? ', jetzt Lv. ' + x.to : ''}</b>`).join('')}</div>` : '';
         const el = openSheet(`<h2>Sieg gegen ${esc(sp.name)}!</h2>
-          <div class="diabig"><span class="gem" aria-hidden="true"></span><b class="num">+${fInt(w.dia)}</b><small>Diamanten${w.first ? ', erster Sieg doppelt' : ''}</small></div>
-          <div class="kv"><span>Diamanten jetzt</span><b>${fInt(S.dia)}</b><span>Kampfdauer</span><b>${nf1.format(F.t)} s</b><span>Schaden</span><b>${fInt(F.dmg)}</b><span>Höchster Treffer</span><b>${fInt(F.maxHit)}</b><span>Revanche</span><b>Lv. ${bossLevel(bi, w.count)}</b></div>
+          <div class="diabig"><span class="gem" aria-hidden="true"></span><b class="num">+${fInt(w.dia)}</b><small>Diamanten${w.first ? ', erster Sieg in ' + ngLabel(w.t) + ' doppelt' : w.reduced ? ', abgeschlossene Stufe: ein Viertel' : ''}</small></div>
+          ${tierLine}
+          <div class="kv"><span>Stufe</span><b>${ngLabel(w.t)} · ${Math.min(w.w, WPT)}/${WPT}</b><span>Diamanten jetzt</span><b>${fInt(S.dia)}</b><span>Kampfdauer</span><b>${nf1.format(F.t)} s</b><span>Schaden</span><b>${fInt(F.dmg)}</b><span>Höchster Treffer</span><b>${fInt(F.maxHit)}</b><span>Nächster Kampf</span><b>Lv. ${bossLevel(bi, bossAt(S, bi))}</b></div>
+          ${eps}
+          ${koBoxHTML(kos)}
           ${canBuy ? `<p style="margin-top:10px"><b>Genug Diamanten für ${esc(W.R[gr][0])}!</b> Du kannst die Region jetzt im Training freischalten.</p>` : ''}
-          <div class="row">${canBuy ? '<button class="btn" id="bw-go" type="button">Zur Region</button>' : ''}<button class="btn gold" data-autofocus id="bw-ok" type="button">Weiter</button></div>`, { dismissible: false });
+          <div class="row">${ngCanAdvance(e2) ? `<button class="btn" id="bw-up" type="button">${ngLabel(e2.max + 1)} freischalten</button>` : ''}${canBuy ? '<button class="btn" id="bw-go" type="button">Zur Region</button>' : ''}<button class="btn gold" data-autofocus id="bw-ok" type="button">Weiter</button></div>`, { dismissible: false });
+        wireKoBox(el, kos);
         $('#bw-ok', el).onclick = () => { closeSheet(true); closeBattle(true); renderAll(); };
         const goR = $('#bw-go', el); if (goR) goR.onclick = () => { closeSheet(true); closeBattle(true); setTab('train'); };
+        const up = $('#bw-up', el);
+        if (up) up.onclick = () => { if (ngAdvance(S, 'b', b.id)) { markDirty(); saveLocal(); toast(`${ngLabel(ngEntry(S, 'b', b.id).t)} freigeschaltet. ${sp.name} ist jetzt deutlich stärker.`); } closeSheet(true); closeBattle(true); renderAll(); };
       }, 450);
     } else {
       S.stats.bossLosses = (S.stats.bossLosses || 0) + 1;
@@ -4258,14 +5028,16 @@ const Music = (function () {
       const tips = [
         timeout ? `Die Zeit war um. Mehr Schaden hilft: weiter leveln, schneller tippen und X-Angriff in den Momenten, in denen ${esc(sp.name)} erschöpft ist.` : `Halte einen Supertrank bereit, wenn ${esc(sp.name)} ${esc(BT.b.move)} auflädt.`,
         `Gegen ${esc(sp.name)} helfen Pokémon vom Typ ${esc(strong.slice(0, 4).join(', '))}. Im Team zählt jedes Pokémon ab Lv. ${BALANCE.bosses.minLevel}.`,
-        'Level im Einzeltraining weiter. Arenasiege bringen dort zusätzliche EP.',
       ];
+      if (F.G.at && F.G.at.t > 0) tips.push('Ist die Stufe zu schwer, wechsle vor dem Kampf in eine niedrigere. Dein Fortschritt bleibt.');
       setTimeout(() => {
         const el = openSheet(`<h2>Niederlage gegen ${esc(sp.name)}</h2>
           <p>${timeout ? 'Die Zeit ist abgelaufen.' : 'Dein Team wurde besiegt.'} ${esc(sp.name)} hatte noch ${nf0.format(Math.ceil(left * 100))}${NB}% KP.</p>
           <div class="kv"><span>Dein Schaden</span><b>${fInt(F.dmg)}</b><span>Höchster Treffer</span><b>${fInt(F.maxHit)}</b></div>
+          ${koBoxHTML(kos)}
           <ul class="help" style="margin-top:10px">${tips.map(t => `<li>${t}</li>`).join('')}</ul>
           <div class="row"><button class="btn gold" data-autofocus id="bl-ok" type="button">Zurück zur Arena</button></div>`, { onClose: () => { closeBattle(); renderAll(); } });
+        wireKoBox(el, kos);
         $('#bl-ok', el).onclick = () => closeSheet();
       }, 450);
     }
@@ -4311,6 +5083,8 @@ const Music = (function () {
       ['Tipps vom Autotipper', fInt(st.autoTaps || 0)],
       ['Zeit auf der Suche (alle Trainer)', st.searchTime ? fTime(st.searchTime) : 'noch keine'],
       ['Suchen abgeschlossen', fInt(st.searches || 0)],
+      ['Höchste erreichte NG+-Stufe', ngHighest(S) ? 'NG+' + ngHighest(S) : 'noch keine'],
+      ['Gemeisterte Gegner', ngMasteredCount(S) + ' / ' + (GYMS.length + BOSSES.length)],
     ].map(([k, v]) => `<span>${esc(k)}</span><b>${esc(v)}</b>`).join('');
   }
   function renderTrainer() {
@@ -4404,6 +5178,7 @@ const Music = (function () {
     dia: { one: 'Diamant', many: 'Diamanten', col: '#b49cff', ico: '<path d="M7 3h10l5 6-10 12L2 9z"/><path d="M2 9h20"/>' },
     tapBoost: { one: 'Tipp-Boost', many: 'Tipp-Boosts', col: BOOSTS.tap.col, ico: BOOSTS.tap.ico },
     autoTap: { one: 'Autotipper', many: 'Autotipper', col: BOOSTS.auto.col, ico: BOOSTS.auto.ico },
+    quickHeal: { one: 'Verkürzte Wiederbelebung', many: 'Verkürzte Wiederbelebungen', col: '#f05a8a', ico: '<path d="M12 21s-7-4.4-9.3-9A5.3 5.3 0 0 1 12 6.4 5.3 5.3 0 0 1 21.3 12C19 16.6 12 21 12 21z"/><path d="M12 10v3.2l2.2 1.4"/>' },
   };
   // "um 06:09 Uhr", "morgen um 06:09 Uhr" or "am 15.10. um 06:09 Uhr"
   function fBack(ms) {
@@ -4476,7 +5251,7 @@ const Music = (function () {
       $('#sp-len', el).innerHTML = BALANCE.search.hours.map(h => `<button type="button" data-sh="${h}" aria-pressed="${String(h === hours)}">${h} Std.</button>`).join('');
       const e = searchExpected(W, S, id, hours);
       const boost = 1 - (1 - Math.min(1, e.tapBoost)) * (1 - Math.min(1, e.autoTap));
-      $('#sp-exp', el).innerHTML = `<span>Diamanten</span><b>${findRange(e.dia)}</b><span>Supertränke</span><b>${findRange(e.potion)}</b><span>X-Angriffe</span><b>${findRange(e.xatk)}</b><span>Boost dabei</span><b>${e.tapBoost + e.autoTap >= 1 ? 'meistens' : 'etwa ' + nf0.format(Math.round(boost * 10) * 10) + NB + '%'}</b><span>Zurück</span><b>${fBack(Date.now() + hours * 3600e3)}</b>`;
+      $('#sp-exp', el).innerHTML = `<span>Diamanten</span><b>${findRange(e.dia)}</b><span>Supertränke</span><b>${findRange(e.potion)}</b><span>X-Angriffe</span><b>${findRange(e.xatk)}</b><span>Boost dabei</span><b>${e.tapBoost + e.autoTap >= 1 ? 'meistens' : 'etwa ' + nf0.format(Math.round(boost * 10) * 10) + NB + '%'}</b><span>Verkürzte Wiederbelebung</span><b>selten, etwa ${nf0.format(Math.max(1, Math.round(Math.min(1, e.quickHeal) * 100)))}${NB}%</b><span>Zurück</span><b>${fBack(Date.now() + hours * 3600e3)}</b>`;
       const t = TRAINER_BY_ID[id];
       $('#sp-note', el).textContent = (S.trainer.sel === id ? `${t.name} ist dein aktiver Trainer. Während der Suche ruhen seine Boni und er bekommt keine EP. Du kannst solange einen anderen Trainer wählen. ` : '')
         + 'Höhere Trainer-Level finden mehr. Brichst du ab, ist alles Gefundene weg.';
@@ -4526,19 +5301,21 @@ const Music = (function () {
       const it = FIND_INFO[k], n = r.found[k];
       return `<div class="find" style="--c:${it.col}"><span class="up-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${it.ico}</svg></span><span>${esc(n === 1 ? it.one : it.many)}</span><b class="num">×${n}</b></div>`;
     }).join('');
-    const over = ['potion', 'xatk'].filter(k => lost[k] > 0).map(k => `${lost[k]} ${lost[k] === 1 ? FIND_INFO[k].one : FIND_INFO[k].many}`);
+    const overK = ['potion', 'xatk', 'quickHeal'].filter(k => lost[k] > 0);
+    const over = overK.map(k => `${lost[k]} ${lost[k] === 1 ? FIND_INFO[k].one : FIND_INFO[k].many}`);
+    const pl = overK.length > 1 || lost[overK[0]] > 1;
     const coins = findSellValue(W, S, r.found);
     const el = openSheet(`<h2>${esc(t.name)} ist zurück!</h2>
       <p>Nach ${r.hours} Stunden Suche hat ${esc(t.name)} das hier gefunden:</p>
       <div class="finds">${rows}</div>
-      ${over.length ? `<p class="svmsg bad">Dein Beutel ist voll: ${over.join(' und ')} ${over.length > 1 || /e$/.test(over[0]) ? 'passen' : 'passt'} nicht mehr hinein und ${over.length > 1 || /e$/.test(over[0]) ? 'gehen' : 'geht'} beim Behalten verloren.</p>` : ''}
+      ${over.length ? `<p class="svmsg bad">Dein Beutel ist voll: ${over.join(' und ')} ${pl ? 'passen' : 'passt'} nicht mehr hinein und ${pl ? 'gehen' : 'geht'} beim Behalten verloren.</p>` : ''}
       <p class="fine" style="margin-top:10px">Du behältst den ganzen Fund oder verkaufst ihn komplett. Einzelne Teile verkaufen geht nicht.</p>
       <div class="row"><button class="btn col" id="sf-sell" type="button">Alles verkaufen<span class="sub">+${fInt(coins)} Coins</span></button><button class="btn gold" data-autofocus id="sf-keep" type="button">Alles behalten</button></div>`);
     $('#sf-keep', el).onclick = () => {
       const res = keepFind(S); if (!res) return;
       markDirty(); saveLocal(); vibe(30);
       closeSheet(true); renderAll();
-      const lostN = (res.lost.potion || 0) + (res.lost.xatk || 0);
+      const lostN = (res.lost.potion || 0) + (res.lost.xatk || 0) + (res.lost.quickHeal || 0);
       toast(lostN ? 'Fund eingepackt. Was nicht mehr in den Beutel passte, ist weg.' : 'Alles eingepackt.');
     };
     $('#sf-sell', el).onclick = () => {
@@ -4570,7 +5347,7 @@ const Music = (function () {
     $('#rg-ok', el).onclick = () => { closeSheet(true); dexRegion = null; arenaRegion = null; renderAll(); };
   }
   function doneHTML() {
-    return `<div class="card"><h3>Reise abgeschlossen</h3><p>Du hast alle ${NPOKE} Pokémon aus allen ${W.R.length} Regionen gelevelt. In der Arena warten weiter Revanchen und Bosse, und im Einzeltraining geht es bis Lv. ${BALANCE.solo.maxLevel}.</p>
+    return `<div class="card"><h3>Reise abgeschlossen</h3><p>Du hast alle ${NPOKE} Pokémon aus allen ${W.R.length} Regionen gelevelt. In der Arena warten die NG+-Stufen der Arenaleiter und Bosse, und im Einzeltraining geht es bis Lv. ${BALANCE.solo.maxLevel}.</p>
       <div class="kv"><span>Spielzeit</span><b>${fTime(S.stats.time)}</b><span>Tipps</span><b>${fInt(S.stats.taps)}</b><span>Kämpfe gewonnen</span><b>${S.stats.wins}</b></div></div>`;
   }
   function openDone() {
@@ -4823,8 +5600,10 @@ const Music = (function () {
         <li><b>Kampf:</b> Nach der letzten Entwicklung kämpft dein Pokémon gegen einen ebenbürtigen Gegner aus der Region. Nach dem Sieg ist es im Pokédex gelevelt.</li>
         <li><b>Pokédex:</b> Jedes gelevelte Pokémon gibt +2 % auf EP und Coins und verdient dauerhaft mit.</li>
         <li><b>Einzeltraining:</b> Unter Arena levelst du eins deiner gelevelten Pokémon separat, nur durch Tippen. Jedes behält seinen Fortschritt.</li>
-        <li><b>Arena:</b> Mit diesem Pokémon forderst du die Arenaleiter heraus, in der Reihenfolge der Originalspiele. Jeder Sieg bringt den Orden, Coins und EP fürs Einzeltraining, jede Revanche ist stärker. Orden machen das Einzeltraining schneller.</li>
-        <li><b>Bosse:</b> Legendäre Pokémon, sehr stark. Antreten dürfen Pokémon ab Lv. ${BALANCE.bosses.minLevel} aus dem Einzeltraining, allein oder als Team aus bis zu ${BALANCE.bosses.teamMax}. Drei Teams kannst du speichern. Achte auf den angekündigten Großangriff: Danach ist der Boss erschöpft und nimmt doppelten Schaden. Jeder Sieg bringt Diamanten.</li>
+        <li><b>Arena:</b> Mit diesem Pokémon forderst du die Arenaleiter heraus, in der Reihenfolge der Originalspiele. Jeder Sieg bringt den Orden, Coins und EP fürs Einzeltraining. Orden machen das Einzeltraining schneller.</li>
+        <li><b>NG+:</b> Jeder Arenaleiter und jeder Boss hat eine eigene Stufe, von der Grundstufe bis NG+10. In einer Stufe wird er mit jedem Sieg etwas stärker, nach ${BALANCE.ng.winsPerTier} Siegen bleibt er so. Dann kannst du die nächste Stufe freischalten oder in niedrigere zurückwechseln. Nach ${BALANCE.ng.winsPerTier} Siegen in NG+10 ist er gemeistert.</li>
+        <li><b>Bosse:</b> Legendäre Pokémon, sehr stark. Antreten dürfen Pokémon ab Lv. ${BALANCE.bosses.minLevel} aus dem Einzeltraining, allein oder als Team aus bis zu ${BALANCE.bosses.teamMax}. Drei Teams kannst du speichern. Achte auf den angekündigten Großangriff: Danach ist der Boss erschöpft und nimmt doppelten Schaden. Jeder Sieg bringt Diamanten und EP fürs Team.</li>
+        <li><b>Pokécenter:</b> Wer im Bosskampf besiegt wird, ist kampfunfähig. Im Pokécenter ist es nach ${fTime(BALANCE.heal.centerMin * 60)} kostenlos wieder fit, sofort mit einem Wiederbelebungstrank. Die seltene Verkürzte Wiederbelebung aus der Trainer-Suche verkürzt die Zeit auf ${BALANCE.heal.quickMin} Minuten.</li>
         <li><b>Diamanten:</b> Damit kaufst du die nächste Region, sobald die aktuelle abgeschlossen ist, und im Shop Boosts fürs Einzeltraining und für deine Trainer. Bosssiege bringen die meisten, die Trainer-Suche ein paar zusätzlich.</li>
         <li><b>Shinys:</b> Ab Lv. ${BALANCE.solo.shinyLevel} im Einzeltraining bekommst du die Shiny-Version samt Entwicklungsstufen. Weiter geht es bis Lv. ${BALANCE.solo.maxLevel}.</li>
         <li><b>Trainer:</b> Er levelt mit deinem Fortschritt mit und gibt Boni auf EP, Coins und seine Spezialität.</li>
