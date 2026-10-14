@@ -145,14 +145,17 @@ main { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; -webkit-ove
 .lvbadge b.pop, .solo-lv b.pop { animation: pop .45s ease-out; }
 @keyframes pop { 0% { transform: scale(1); color: var(--text); } 35% { transform: scale(1.35); color: var(--xp); } 100% { transform: scale(1); } }
 
-/* tap areas and battles only use Tim's own backgrounds and arena floors (img/), static, without animation */
+/* tap areas and battles only use Tim's own backgrounds and arena floors (img/), static, without animation.
+   The pictures are stored 4x larger than in Tim's sheets (upscale_sr.py), so the phone only ever scales them down:
+   drawn smooth, never with pixel enlargement. Only the Pokémon sprites stay pixel sharp (.spr). */
 .stage {
   position: relative; display: block; width: 100%; height: clamp(210px, 38vh, 330px); border: 0; padding: 0;
   border-radius: 22px; overflow: hidden; cursor: pointer; touch-action: manipulation; user-select: none; -webkit-user-select: none;
-  background: #0b0d1c var(--bg, none) center / cover no-repeat; image-rendering: pixelated;
+  background: #0b0d1c var(--bg, none) center / cover no-repeat;
   box-shadow: inset 0 0 0 1px var(--line);
 }
-.mon-vis { position: absolute; left: 50%; bottom: 14%; transform: translateX(-50%); display: grid; place-items: end center; pointer-events: none; }
+/* the Pokémon is centered over the full width, so wide sprites (big evolutions) stay in the middle too */
+.mon-vis { position: absolute; left: 0; right: 0; bottom: 14%; display: grid; justify-items: center; align-items: end; pointer-events: none; }
 .mon-vis img.spr, .solo-vis img.spr, .bspr img.spr, .dexhead .big img.spr, .bosshead .big img.spr, .bossimg img.spr { filter: drop-shadow(0 5px 4px rgba(0, 0, 0, .55)); }
 .mon-vis .bob, .solo-vis .bob { animation: bob 2.6s ease-in-out infinite; transform-origin: 50% 100%; display: grid; place-items: end center; }
 .mon-vis .bob.squash, .solo-vis .bob.squash { animation: squash .14s ease-out; }
@@ -323,7 +326,7 @@ main { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; -webkit-ove
 .kv b { font-family: var(--display); font-weight: 500; text-align: right; }
 .flavor { background: var(--panel-2); border-radius: 12px; padding: 10px 12px; font-size: 13.5px; color: var(--text); margin-top: 10px; }
 .dexhead { display: flex; gap: 14px; align-items: center; }
-.dexhead .big { width: 120px; height: 120px; display: grid; place-items: center; flex: none; background: var(--panel-2) var(--bg, none) center / cover no-repeat; image-rendering: pixelated; border-radius: 18px; box-shadow: inset 0 0 0 1px var(--line); position: relative; overflow: hidden; }
+.dexhead .big { width: 120px; height: 120px; display: grid; place-items: center; flex: none; background: var(--panel-2) var(--bg, none) center / cover no-repeat; border-radius: 18px; box-shadow: inset 0 0 0 1px var(--line); position: relative; overflow: hidden; }
 .dexhead .twins { display: flex; gap: 6px; }
 .dexhead .twins .big { width: 92px; height: 92px; }
 .evo-sum { display: grid; gap: 4px; margin: 6px 0 0; padding: 0; list-style: none; font-size: 14px; }
@@ -337,9 +340,9 @@ main { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; -webkit-ove
 
 /* evolution and shiny overlay */
 .evo { position: absolute; inset: 0; z-index: 70; background: #05060f; display: grid; place-items: center; text-align: center; padding: 24px; animation: fade .25s; }
-.evo .ev-stage { width: 220px; height: 220px; display: grid; place-items: center; position: relative; }
+.evo .ev-stage { width: 220px; height: 220px; margin: 0 auto; display: grid; place-items: center; position: relative; }
 .evo .ev-stage > * { position: absolute; }
-.evo .ev-from, .evo .ev-to { left: 50%; top: 50%; transform: translate(-50%, -50%); display: grid; place-items: center; }
+.evo .ev-from, .evo .ev-to { inset: 0; display: grid; place-items: center; }
 .evo .ev-from { animation: evoA 2.6s steps(1) forwards; }
 .evo .ev-to { opacity: 0; animation: evoB 2.6s steps(1) forwards; }
 .evo .ev-flash { inset: -40px; border-radius: 50%; background: radial-gradient(closest-side, #fff, transparent); opacity: 0; animation: flash 2.6s ease-out forwards; }
@@ -361,10 +364,11 @@ main { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; -webkit-ove
   position: relative; flex: 1; min-height: 280px; border-radius: 22px; overflow: hidden; touch-action: manipulation; user-select: none; -webkit-user-select: none; cursor: pointer;
   background: #0b0d1c; box-shadow: inset 0 0 0 1px var(--line);
 }
-/* battle scene: the type background above, the arena floor below */
-.scene { position: absolute; inset: 0; pointer-events: none; image-rendering: pixelated; }
-.scene .sky { position: absolute; left: 0; right: 0; top: 0; height: 52%; background: center 30% / cover no-repeat; }
-.scene .floor { position: absolute; left: 0; right: 0; bottom: 0; height: 58%; background: center top / cover no-repeat; border-radius: 18px 18px 0 0; box-shadow: 0 -8px 24px rgba(0, 0, 0, .5); }
+/* battle: one single arena floor (Tim's arena picture for the type of the opposing Pokémon), whole and undivided,
+   as large as the field allows; the two Pokémon stand on it (like Tim's battle mockups) */
+.field { container-type: size; }
+.arena { position: absolute; left: 50%; top: 50%; translate: -50% -50%; width: 100%; aspect-ratio: 217 / 230; background: #141833 center / cover no-repeat; border-radius: 16px; box-shadow: 0 10px 30px rgba(0, 0, 0, .45); pointer-events: none; }
+@supports (width: 1cqh) { .arena { width: min(100cqw, 94.3cqh); } }
 .field.shake { animation: shake .25s; }
 @keyframes shake { 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
 .hpcard { position: absolute; background: rgba(13, 15, 34, .86); border-radius: 14px; padding: 8px 10px 9px; width: min(62%, 260px); box-shadow: inset 0 0 0 1px var(--line); pointer-events: none; }
@@ -392,10 +396,10 @@ main { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; -webkit-ove
 .st.gold { background: color-mix(in oklab, var(--gold) 30%, #141833); color: #ffeab0; }
 .teamdots i.on { background: var(--gold); }
 .bspr { position: absolute; display: grid; place-items: end center; pointer-events: none; }
-.bspr.e { right: 8%; top: 27%; }
-.field.boss .bspr.e { right: 6%; top: 29%; }
+.bspr.e { right: 9%; bottom: 56%; }
+.field.boss .bspr.e { right: 6%; bottom: 53%; }
 .field.boss .hpcard.e { width: min(70%, 300px); }
-.bspr.p { left: 6%; bottom: 15%; }
+.bspr.p { left: 4%; bottom: 9%; }
 .bspr .hit { animation: hitflash .22s steps(2); }
 @keyframes hitflash { 50% { opacity: .2; } }
 .bspr .lunge { animation: lunge .22s ease-out; }
@@ -448,11 +452,11 @@ main { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; -webkit-ove
 .solo-top { display: grid; grid-template-columns: 132px 1fr; gap: 12px; align-items: stretch; }
 .solo-stage {
   position: relative; width: 132px; height: 132px; border: 0; padding: 0; border-radius: 16px; overflow: hidden; cursor: pointer; touch-action: manipulation; user-select: none; -webkit-user-select: none;
-  background: #0b0d1c var(--bg, none) center / cover no-repeat; image-rendering: pixelated;
+  background: #0b0d1c var(--bg, none) center / cover no-repeat;
   box-shadow: inset 0 0 0 1px var(--line);
 }
 .solo-stage.shiny { box-shadow: inset 0 0 0 2px color-mix(in oklab, var(--shiny) 70%, var(--line)), 0 0 18px rgba(255, 226, 122, .18); }
-.solo-vis { position: absolute; left: 50%; bottom: 10px; transform: translateX(-50%); display: grid; place-items: end center; pointer-events: none; }
+.solo-vis { position: absolute; left: 0; right: 0; bottom: 10px; display: grid; justify-items: center; align-items: end; pointer-events: none; }
 .solo-stage .hint { position: absolute; left: 0; right: 0; top: 6px; text-align: center; font-size: 10.5px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: #fff; text-shadow: 0 1px 3px rgba(0, 0, 0, .95), 0 0 8px rgba(0, 0, 0, .6); pointer-events: none; }
 .solo-info { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .solo-info h3 { margin: 0; font-family: var(--display); font-weight: 600; font-size: 22px; line-height: 1.1; overflow-wrap: anywhere; }
@@ -485,10 +489,10 @@ button.boost > * { pointer-events: none; }
 .gym .gs small { display: block; font-size: 11.5px; color: var(--muted); }
 .gym .gs small.go { color: var(--gold); font-weight: 800; }
 .gym.boss { grid-template-columns: 56px 1fr auto; min-height: 72px; }
-.bossimg { width: 56px; height: 56px; display: grid; place-items: center; border-radius: 14px; overflow: hidden; background: var(--panel-2) var(--bg, none) center / cover no-repeat; image-rendering: pixelated; }
+.bossimg { width: 56px; height: 56px; display: grid; place-items: center; border-radius: 14px; overflow: hidden; background: var(--panel-2) var(--bg, none) center / cover no-repeat; }
 .bossimg svg { width: 22px; height: 22px; color: #8c93c2; }
 .bosshead { display: grid; grid-template-columns: 112px 1fr; gap: 12px; align-items: center; margin: 4px 0 2px; }
-.bosshead .big { width: 112px; height: 112px; display: grid; place-items: center; border-radius: 18px; overflow: hidden; background: var(--panel-2) var(--bg, none) center / cover no-repeat; image-rendering: pixelated; box-shadow: inset 0 0 0 1px var(--line); }
+.bosshead .big { width: 112px; height: 112px; display: grid; place-items: center; border-radius: 18px; overflow: hidden; background: var(--panel-2) var(--bg, none) center / cover no-repeat; box-shadow: inset 0 0 0 1px var(--line); }
 .bosshead .kv { margin: 0; font-size: 13.5px; }
 .sheet h3 small.muted { font-weight: 500; font-size: 12px; color: var(--muted); margin-left: 4px; }
 .teamslots { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
@@ -1354,8 +1358,11 @@ function artBg(types) {
   for (const x of t) if (ART.bgStandIn[x]) return ART.bgStandIn[x];
   return 'bg-pflanze';
 }
-function artFloor(types) {
+// Arena floor for the opposing Pokémon: its own type, otherwise its second type, otherwise a stand-in.
+// prefer: in a gym the gym's type wins when the Pokémon has it (a Wasser/Eis Pokémon in the Eis gym stands on ice).
+function artFloor(types, prefer) {
   const t = types.filter(x => x != null);
+  if (prefer != null && t.includes(prefer) && ART.floor.includes(prefer)) return 'floor-' + ART_SLUG[prefer];
   for (const x of t) if (ART.floor.includes(x)) return 'floor-' + ART_SLUG[x];
   for (const x of t) if (ART.floorStandIn[x]) return ART.floorStandIn[x];
   return 'floor-standard';
@@ -2079,8 +2086,21 @@ const Music = (function () {
 /* Pokémon Idle-Trainer: page logic. Uses the core rules (BALANCE, GYMS, TRAINERS, ctx, addXP, ...) and DATA/TABLES. */
 (function () {
   // ---------- version and patch notes ----------
-  const GAME_VERSION = '1.4.0';
+  const GAME_VERSION = '1.5.0';
   const PATCH_NOTES = [
+    {
+      v: '1.5.0', date: '14.10.2026', title: 'Patch 5.0: Fehlerbehebung bei den Designs',
+      parts: [
+        ['Behoben', [
+          '<b>Scharfe Hintergründe:</b> Die Bilder lagen nur in kleiner Auflösung vor und wurden im Training und im Kampf stark vergrößert, deshalb sahen sie verpixelt aus. Im Einzeltraining ist die Fläche klein, dort reichte die Auflösung. Jetzt sind alle Hintergründe und Arenaböden in vierfacher Auflösung hinterlegt und werden überall scharf dargestellt.',
+          '<b>Ein Arenaboden im Kampf:</b> Statt zwei geteilter Bilder zeigt jeder Kampf nur noch einen einzigen Arenaboden, passend zum Typ des gegnerischen Pokémon. Kämpfst du gegen ein Pflanzen-Pokémon, stehst du in der Pflanzenarena. Bei mehreren Gegnern passt sich der Boden jedem Gegner an.',
+          '<b>Pokémon wieder mittig:</b> Im Entwicklungsfenster stand das Pokémon bei langen Namen links neben der Mitte. Jetzt steht es dort und im Tippbereich immer genau mittig, auch bei großen Pokémon.',
+        ]],
+        ['Dein Spielstand', [
+          'Dein Fortschritt bleibt vollständig erhalten.',
+        ]],
+      ],
+    },
     {
       v: '1.4.0', date: '13.10.2026', title: 'Patch 4.0: Trainer-Suche, Teams, eigenes Design und Musik',
       parts: [
@@ -2221,8 +2241,14 @@ const Music = (function () {
   const IMG = name => 'img/' + name + '.webp';
   const bgVar = types => `--bg:url(${IMG(artBg(types))})`;
   function preloadArt(...names) { for (const n of names) { const im = new Image(); im.src = IMG(n); } }
-  function sceneHTML(bg, floor) {
-    return `<div class="scene" aria-hidden="true"><div class="sky" style="background-image:url(${IMG(bg)})"></div><div class="floor" style="background-image:url(${IMG(floor)})"></div></div>`;
+  // A fight shows one single arena floor (Tim's arena pictures), matching the type of the opposing Pokémon.
+  // The two Pokémon stand on it; nothing else is drawn behind it.
+  function arenaHTML(floor, sprites) {
+    return `<div class="arena" id="b-arena" aria-hidden="true" data-floor="${floor}" style="background-image:url(${IMG(floor)})">${sprites}</div>`;
+  }
+  function setArena(floor) {
+    const a = $('#b-arena'); if (!a || a.dataset.floor === floor) return;
+    a.dataset.floor = floor; a.style.backgroundImage = `url(${IMG(floor)})`;
   }
 
   // ---------- number formatting (German) ----------
@@ -3360,7 +3386,7 @@ const Music = (function () {
     const st = battleSetup(W, S, c.line, c.p, S.lvl);
     const P = c.sp, O = W.P[c.line.opp - 1];
     S.seen[O.id] = 1;
-    preloadArt(artBg(O.types), 'floor-standard');
+    preloadArt(artFloor(O.types));
     const pm = moveFor(P.types, O.types), em = moveFor(O.types, P.types);
     const adv = pm.raw > em.raw ? 'Typvorteil für dich' : pm.raw < em.raw ? 'Typvorteil für den Gegner' : 'Kein Typvorteil';
     const el = openSheet(`<h2>Kampf um ${esc(P.name)}</h2>
@@ -3394,7 +3420,6 @@ const Music = (function () {
       me: { id: P.id, name: P.name, lvl: S.lvl, maxHp: st.maxHp, types: P.types, shiny: false },
       foes: [{ id: O.id, name: O.name, lvl: c.line.oppLv, types: O.types, hpMax: st.eHp, hit: st.hit, tap: st.tap, special: st.special, eHit: st.eHit, pm: moveFor(P.types, O.types), em: moveFor(O.types, P.types) }],
       intro: `${O.name} tritt gegen ${P.name} an!`,
-      art: [artBg(O.types), 'floor-standard'],
     });
   }
   function startGymBattle(gi) {
@@ -3407,9 +3432,9 @@ const Music = (function () {
     beginBattle({
       kind: 'gym', gi, leader: g.leader,
       me: { id: G.id, name: G.sp.name, lvl: G.L, maxHp: G.maxHp, types: G.sp.types, shiny: !!S.shiny[G.id] },
-      foes, intro: `${g.leader} schickt ${foes[0].name} in den Kampf!`,
-      art: [artBg([g.type]), artFloor([g.type])],
+      foes, intro: `${g.leader} schickt ${foes[0].name} in den Kampf!`, gymType: g.type,
     });
+    preloadArt(...foes.map(f => artFloor(f.types, g.type)));
   }
   function beginBattle(cfg) {
     Music.mode('battle');
@@ -3419,10 +3444,9 @@ const Music = (function () {
     box.style.setProperty('--ta', TYPE_COL[P.types[0]]);
     box.innerHTML = `<div class="col">
       <div class="field" id="b-field" role="button" tabindex="0" aria-label="Angreifen: tippen">
-        ${sceneHTML(cfg.art[0], cfg.art[1])}
+        ${arenaHTML(artFloor(cfg.foes[0].types, cfg.gymType), `<div class="bspr e" id="b-espr"></div>
+          <div class="bspr p" id="b-pspr">${monHTML(P.id, 140, { kind: 'back', scale: 2.6, emb: 0.8, shiny: P.shiny })}</div>`)}
         <div class="hpcard e"><div class="nm"><span id="b-ename"></span><span id="b-elv"></span></div><div class="hp"><i id="b-ehp"></i></div><div class="hpnum" id="b-ehpn"></div>${cfg.foes.length > 1 ? '<div class="teamdots" id="b-dots"></div>' : ''}</div>
-        <div class="bspr e" id="b-espr"></div>
-        <div class="bspr p" id="b-pspr">${monHTML(P.id, 140, { kind: 'back', scale: 2.6, emb: 0.8, shiny: P.shiny })}</div>
         <div class="hpcard p"><div class="nm"><span>${esc(P.name)}</span><span>Lv. ${P.lvl}</span></div><div class="hp"><i id="b-php"></i></div><div class="hpnum" id="b-phpn"></div><div class="charge" id="b-charge"><i></i></div></div>
         <div class="timer" id="b-time">0 s</div>
         <div class="tapnote" id="b-note">Tippen zum Angreifen</div>
@@ -3458,6 +3482,7 @@ const Music = (function () {
     $('#b-ename').textContent = F.name;
     $('#b-elv').textContent = 'Lv. ' + F.lvl;
     $('#b-espr').innerHTML = monHTML(F.id, 120, { kind: 'anim', scale: 2.2, emb: 0.8 });
+    setArena(artFloor(F.types, BT.gymType));
     $('#battle').style.setProperty('--eb', TYPE_COL[F.types[0]]);
     const dots = $('#b-dots');
     if (dots) dots.innerHTML = BT.foes.map((x, i) => `<i class="${i < BT.idx ? 'ko' : ''}"></i>`).join('');
@@ -3893,7 +3918,7 @@ const Music = (function () {
     if (!S.solo.sel) { toast('Wähle zuerst ein Pokémon fürs Einzeltraining.'); openSoloPicker(); return; }
     const g = GYMS[gi], wins = gymWins(S, gi);
     const G = gymSetup(W, S, gi);
-    preloadArt(artBg([g.type]), artFloor([g.type]));
+    preloadArt(...new Set(G.team.map(o => artFloor(o.sp.types, g.type))));
     const adv = G.team.filter(o => o.pe >= 2).length, dis = G.team.filter(o => o.ee >= 2).length;
     const reward = gymReward(W, S, gi, wins);
     const team = G.team.map(o => `<div class="tm"><div class="tv">${monHTML(o.id, 56, { emb: 0.8 })}</div><b>${esc(o.sp.name)}</b><small>Lv. ${o.lvl}</small>${o.pe >= 2 ? '<div class="eff adv">Vorteil</div>' : o.ee >= 2 ? '<div class="eff dis">Gefahr</div>' : ''}</div>`).join('');
@@ -4080,11 +4105,10 @@ const Music = (function () {
     box.style.setProperty('--eb', TYPE_COL[sp.types[0]]);
     box.innerHTML = `<div class="col">
       <div class="field boss" id="b-field" role="button" tabindex="0" aria-label="Angreifen: tippen">
-        ${sceneHTML(artBg(sp.types), artFloor(sp.types))}
+        ${arenaHTML(artFloor(sp.types), `<div class="bspr e big" id="b-espr">${monHTML(b.mon, 150, { kind: 'anim', scale: 2.4, emb: 0.8 })}</div>
+          <div class="bspr p" id="b-pspr"></div>`)}
         <div class="hpcard e"><div class="nm"><span>${esc(sp.name)}</span><span>Lv. ${G.L}</span></div><div class="hp"><i id="b-ehp"></i></div><div class="hpnum" id="b-ehpn"></div>
           <div class="bstate" id="b-state"></div><div class="charge boss" id="b-bcharge" hidden><i></i></div></div>
-        <div class="bspr e big" id="b-espr">${monHTML(b.mon, 150, { kind: 'anim', scale: 2.4, emb: 0.8 })}</div>
-        <div class="bspr p" id="b-pspr"></div>
         <div class="hpcard p"><div class="nm"><span id="b-pname"></span><span id="b-plv"></span></div><div class="hp"><i id="b-php"></i></div><div class="hpnum" id="b-phpn"></div><div class="charge" id="b-charge"><i></i></div>${team.length > 1 ? '<div class="teamdots" id="b-pdots"></div>' : ''}</div>
         <div class="timer" id="b-time"></div>
         <div class="tapnote" id="b-note">Tippen zum Angreifen</div>
