@@ -186,6 +186,9 @@ main { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; -webkit-ove
 .bar.cap > i, .bar.gold > i { background: linear-gradient(180deg, #ffe7a3, var(--gold) 55%, #d09a1c); }
 .xprow { display: flex; justify-content: space-between; gap: 8px; margin-top: 6px; font-size: 13px; color: var(--muted); }
 .xprow b { color: var(--text); font-family: var(--display); font-weight: 500; }
+/* Patch 8.1: EP pro Tipp und ihr Cap im Einzeltraining */
+.capline { margin-top: 4px; font-size: 12px; line-height: 1.35; color: var(--muted); }
+.capline b { color: var(--text); font-family: var(--display); font-weight: 500; }
 
 .goal { margin-top: 12px; display: flex; gap: 10px; align-items: center; font-size: 13.5px; color: var(--muted); }
 .goal strong { color: var(--text); }
@@ -643,8 +646,11 @@ svg.crown { width: 1.05em; height: 1.05em; color: var(--gold); vertical-align: -
 /* Patch 8: boss fights in the overlay from the design (boss-overlay.js) */
 .battle.bossmode { padding: var(--sat) 0 var(--sab); }
 .battle.bossmode > .bo { flex: 1 1 auto; height: auto; min-height: 0; --bo-font: var(--body); --bo-font-num: var(--display); }
+/* Patch 8.1: während des Bosskampfs ruht das Hauptspiel dahinter (nichts zu zeichnen); kleine Bilder der Team-Knöpfe */
+#app.behind { display: none; }
+.battle.bossmode .bo-mate-ic img.mate-spr { transform: scale(1.45); }
 .battle.bossmode .bo-floats .px { width: 6px; height: 6px; }
-.bo.bo--calm .bo-scene *, .bo.bo--calm .bo-fx *, .bo.bo--calm .bo-mon img { animation-play-state: paused !important; }
+.bo.bo--calm .bo-scene *, .bo.bo--calm .bo-fx *, .bo.bo--calm .bo-mon img, .bo.bo--calm .bo-al { animation-play-state: paused !important; }
 .bo.bo--calm .bo-dodge[data-state="now"] { animation: none; }
 .ngmech { margin: 6px 0 0; color: var(--muted); }
 .ngmech b { color: var(--text); font-weight: 800; }
@@ -862,11 +868,20 @@ const BALANCE = {
     quickHeal: { max: 9 },    // Verkürzte Wiederbelebung (only from the trainer search)
   },
   // Separate leveling ("Einzeltraining"): taps only, independent of the main game.
-  // EP for level L -> L+1 = needBase * L^needExp * (1 + (L / needKnee)^needSteep): the higher the level, the steeper
-  // it gets (Patch 7: at 3 taps per second with all 68 badges about 1 hour of tapping to Lv. 200, 11 to Lv. 500 and
-  // 100 to Lv. 1000; with the 48 badges up to Kalos 1, 14 and 133 hours; see eptimes.js).
-  // EP per tap: tapEp, +perBadge for every different badge. Shiny at shinyLevel, legendary and mythical ones at shinyLevelLeg.
-  solo: { startLevel: 5, maxLevel: 1000, tapEp: 12, needBase: 10, needExp: 1.2, needKnee: 300, needSteep: 1.5, perBadge: 0.08, shinyLevel: 250, shinyLevelLeg: 500 },
+  // EP per tap (Patch 8.1): the badge value tapEp * (1 + perBadge * different badges) * (1 + perBadgeWin * all wins,
+  // repeated ones included, as before Patch 7) at startLevel, rising evenly with the Pokémon's level up to tapCap at
+  // tapCapLevel and never higher (boosts multiply on top).
+  // EP for level L -> L+1: needAtKnee at kneeLevel, below it ~ L^needExp, above it ~ L^needExp2.
+  // At 3 taps per second without boosts (curve81.js): Lv. 100 about 1 minute per level (with many badges less),
+  // Lv. 600 3 minutes, Lv. 1000 5 minutes; Lv. 5 to 1000 about 42 to 45 hours of tapping.
+  // Saves keep level and EP towards the next level, so all of these can change without touching a save.
+  // Shiny at shinyLevel, legendary and mythical ones at shinyLevelLeg.
+  solo: {
+    startLevel: 5, maxLevel: 1000,
+    tapEp: 12, perBadge: 0.08, perBadgeWin: 0.01, tapCap: 1000, tapCapLevel: 600,
+    needAtKnee: 540000, kneeLevel: 600, needExp: 1.6, needExp2: 1,
+    shinyLevel: 250, shinyLevelLeg: 500,
+  },
   // Regions: diamonds to unlock region r (index into the region list, Kanto is free).
   // A region can only be bought once the region before it is complete. The first wins against the bosses of
   // the regions before always pay for the next one, with a little left over.
@@ -937,6 +952,11 @@ const BALANCE = {
     bossHp: [2.24, 0.834, 1.02, 0.728, 1.008, 1.172, 1.257, 1.054, 1.599, 1.079, 0.919, 0.974, 0.982, 0.615, 1.103],
     bossDmg: [1.238, 0.888, 1.021, 1.487, 0.911, 0.911, 0.915, 0.908, 1.015, 0.919, 1.043, 1.047, 1, 0.95, 1.012],
     hpMult: 40, dmgMult: 0.4217, playerHpMult: 3, power: 40, enemyPower: 40,
+    // Patch 8.1: every hit of the boss lands noticeably, whatever the types. A normal hit takes at least floorHit of
+    // the member's max HP, a big attack that hits at least floorBig (phase 1, later phases a little more). Both hold
+    // up to the boss's level; a member above it takes less: (boss level / member level)^floorExp of the floor.
+    // Normal hits: a type effect softens them at most to hitMinEff (in NG+ ngMinEff applies anyway).
+    floorHit: 0.035, floorBig: 0.35, floorExp: 2, hitMinEff: 0.5,
     timeLimit: 180,                                                   // after timeLimit seconds the boss wins
     // Phases: a new one at each HP share in phaseAt, the third (at 25 %) only from tier thirdPhaseFrom on.
     // A phase change stops at the mark, the boss roars for roarTime seconds (no damage either way).
@@ -1568,7 +1588,7 @@ function winBattle(W, S, events = []) {
 }
 
 // ---------- separate leveling (Einzeltraining) and shinies ----------
-function soloNeed(L) { const s = BALANCE.solo; return s.needBase * Math.pow(L, s.needExp) * (1 + Math.pow(L / s.needKnee, s.needSteep)); }
+function soloNeed(L) { const s = BALANCE.solo; return s.needAtKnee * Math.pow(L / s.kneeLevel, L <= s.kneeLevel ? s.needExp : s.needExp2); }
 // Level from which this Pokémon becomes a shiny: legendary and mythical ones later.
 function shinyLevelFor(W, id) { const s = BALANCE.solo, sp = W.P[id - 1]; return sp && sp.leg ? s.shinyLevelLeg : s.shinyLevel; }
 function soloLevel(S, id) { return (S.solo.lv && S.solo.lv[id]) || BALANCE.solo.startLevel; }
@@ -1577,11 +1597,24 @@ function badgeCounts(S) {
   for (const g of GYMS) { const w = S.gyms[g.id] || 0; if (w > 0) distinct++; total += w; }
   return { distinct, total };
 }
-// EP per tap: more for every different badge (repeated wins no longer count, Patch 7).
-function soloTapEp(S) {
+// EP per tap (Patch 8.1). The badge value: more for every different badge and for every win (repeated wins count
+// again, as before Patch 7). From there the EP per tap rise evenly with the level up to the cap.
+function soloTapBase(S) {
   const s = BALANCE.solo, b = badgeCounts(S);
+  return s.tapEp * (1 + s.perBadge * b.distinct) * (1 + s.perBadgeWin * b.total);
+}
+// EP per tap at level L before boosts, never above the cap.
+function soloTapRaw(S, L) {
+  const s = BALANCE.solo, base = soloTapBase(S);
+  if (base >= s.tapCap) return s.tapCap;
+  const k = Math.max(0, Math.min(1, (L - s.startLevel) / Math.max(1, s.tapCapLevel - s.startLevel)));
+  return base + (s.tapCap - base) * k;
+}
+// EP per tap with a running Tipp-Boost, for level L (default: the Pokémon in the separate training).
+function soloTapEp(S, L) {
+  if (L == null) L = S.solo && S.solo.sel ? soloLevel(S, S.solo.sel) : BALANCE.solo.startLevel;
   const boost = S.boost && S.boost.tap > 0 ? BALANCE.boosts.tap.mult : 1;
-  return s.tapEp * (1 + s.perBadge * b.distinct) * boost;
+  return soloTapRaw(S, L) * boost;
 }
 function soloSelect(S, id) {
   if (!S.reg[id]) return false;
@@ -1600,7 +1633,7 @@ function soloTap(W, S, events = [], auto = false) {
   if (!id || !S.reg[id] || isKO(S, id)) return events;
   if (auto) S.stats.autoTaps = (S.stats.autoTaps || 0) + 1;
   else S.stats.soloTaps = (S.stats.soloTaps || 0) + 1;
-  return soloGain(W, S, id, soloTapEp(S), events);
+  return soloGain(W, S, id, soloTapEp(S, soloLevel(S, id)), events);
 }
 // EP for a Pokémon in the separate training, with level-ups and the shiny at its shiny level.
 function soloGain(W, S, id, ep, events = []) {
@@ -2098,9 +2131,13 @@ function bossSetup(W, S, bi, team, t, L) {
     const hit = gymDamage(Lm, B.power, ms.atk, bs.def, pe);
     const enemy = e => gymDamage(Lb, B.enemyPower, bs.atk, ms.def, e) * B.dmgMult * tD * sD;
     const bigEff = b.moves.map(mv => bossEff(W, [mv[1]], m.types, t));
+    // Patch 8.1: the floors (see BALANCE.bosses.floorHit), fading for members above the boss's level
+    const maxHp = ms.hp * B.playerHpMult, fl = Math.pow(Math.min(1, Lb / Lm), B.floorExp);
     return {
-      id, sp: m, L: Lm, types: m.types, pe, ee, maxHp: ms.hp * B.playerHpMult,
-      hit, tap: hit * K.tapRatio, special: hit * K.specialMult, eHit: enemy(ee), bigEff, big: bigEff.map(enemy),
+      id, sp: m, L: Lm, types: m.types, pe, ee, maxHp,
+      hit, tap: hit * K.tapRatio, special: hit * K.specialMult,
+      eHit: Math.max(enemy(Math.max(B.hitMinEff, ee)), B.floorHit * maxHp * fl), bigEff,
+      big: bigEff.map(e => Math.max(enemy(e), B.floorBig * maxHp * fl / B.pace[0].bigMult)),
     };
   });
   return { bi, id: b.id, sp, L: Lb, t, sig: b.sig, phases: bossPhases(t), combos: bossCombos(bi, t), potionMax: bossPotionLimit(t), hpMax: bs.hp * B.hpMult * tH * sH, members };
@@ -2487,6 +2524,16 @@ function bossRecord(S, F) {
  *  - Artworks: mehrere Quellen nacheinander, zuletzt ein Ersatzbild (fallback).
  *  - Ausweichen-Button, Ladebalken, Phasenanzeige, Konterfenster, Status, Spezialanzeige, Team zum Wechseln,
  *    Schadenszahlen, Signatur im Intro und Aufgeben mit Rückfrage.
+ *
+ * Patch 8.1 (Kampfgefühl), alle mit "Patch 8.1" markiert:
+ *  - Pixelart-Sprites statt Artworks (CONFIG.pixel): ganzzahlig vergrößert, immer auf ganzen Displaypixeln,
+ *    mit image-rendering: pixelated, die GIF-Animation bleibt.
+ *  - Trefferwirkung: Boss blitzt auf und wackelt (im Konterfenster stärker), eigenes Pokémon springt beim Angriff
+ *    nach vorn und blitzt rot auf, wenn es getroffen wird.
+ *  - Schadenszahlen in festen Spuren ohne Überlappung, Summe des Konterschadens, Infobereich mit festem Aufbau,
+ *    kurzes Phasenbanner oben in der Arena.
+ *  - Alle Animationen nur über transform und opacity. Die bewegten Teile der Vektorszene und die Partikel laufen
+ *    als eigene Ebenen, damit die Grafikkarte sie bewegt und nichts in jedem Bild neu gezeichnet werden muss.
  */
 (function (global) {
   'use strict';
@@ -2516,6 +2563,11 @@ function bossRecord(S, F) {
     local: null,
     // Patch 8: so lange (ms) wird höchstens auf ein Bild gewartet, dann kommt die nächste Quelle.
     artTimeout: 8000,
+    // Patch 8.1: Pixelart-Sprites (Daten mit pixel: true). Höchstgröße als Anteil der Arena (Breite, Höhe);
+    // vergrößert wird in ganzen Schritten bis zu pixelMax.
+    bossBox: [0.9, 0.62], playerBox: [0.54, 0.42], pixelMax: 6,
+    // Patch 8.1: bewegte Szenenteile und Partikel als eigene Ebenen (false = wie im Original in der SVG)
+    lift: true,
     texts: {
       boss: 'Boss',
       lv: 'Lv.',
@@ -2527,6 +2579,8 @@ function bossRecord(S, F) {
       dodge: 'Ausweichen',
       phase: 'Phase',
       signature: 'Signatur',
+      counter: 'Konterschaden',
+      counterDone: 'Konter gesamt',
       switchTo: (name) => `Zu ${name} wechseln`,
       skip: 'Tippen zum Überspringen',
       appears: (name) => `${name} stellt sich dir in den Weg!`,
@@ -3255,8 +3309,144 @@ ${m.front || ''}
       next(0);
     });
   }
-  // Patch 8: erst das Artwork, dann das Ersatzbild
-  const loadArt = (mon) => loadImage(mon.art).catch((err) => (mon.fallback ? loadImage(mon.fallback) : Promise.reject(err)));
+  // Patch 8: erst das Bild, dann das Ersatzbild. Patch 8.1: Pixelart-Sprites werden markiert (scharf vergrößern).
+  const loadArt = (mon) => loadImage(mon.art)
+    .then((img) => { if (mon.pixel) { img.dataset.pix = '1'; img.classList.add('is-pix'); } return img; })
+    .catch((err) => (mon.fallback ? loadImage(mon.fallback) : Promise.reject(err)));
+  const isPix = (img) => !!(img && img.dataset && img.dataset.pix === '1');
+  // Patch 8.1: Kopie des Sprites für das Aufblitzen (weiß, golden, rot) und die Silhouette im Intro. Sie nutzt
+  // dieselbe Bilddatei, läuft also im selben Takt wie die GIF-Animation, und ist sonst unsichtbar.
+  function mkFlash(img) {
+    const f = img.cloneNode();
+    f.className = 'bo-flash' + (isPix(img) ? ' is-pix' : '');
+    f.removeAttribute('data-pix');
+    f.alt = '';
+    return f;
+  }
+
+  /* Patch 8.1: Bewegte Teile der Vektorszene und die Partikel als eigene HTML-Ebenen. Jedes bewegte Element
+     wandert samt allem, was es von seinen Eltern erbt, in eine kleine eigene SVG; die Animation (dieselben
+     Keyframes) liegt dann auf der HTML-Ebene darum und läuft auf der Grafikkarte. */
+  const SVGNS = 'http://www.w3.org/2000/svg';
+  const LIFT_CLS = /(^|\s)bo-(a-[a-z]+|p)(\s|$)/;
+  const LIFT_OPACITY = /(^|\s)bo-(p-[a-z]+|a-(glow|flash|ripple|pulse|star|ray))(\s|$)/;
+  const LIFT_KEEP = ['fill', 'stroke', 'stroke-width', 'stroke-linecap', 'stroke-linejoin', 'stroke-dasharray', 'fill-opacity', 'stroke-opacity', 'fill-rule', 'color'];
+  function liftAnimations(svg, box) {
+    if (!svg || !box || !svg.getScreenCTM || typeof DOMPoint === 'undefined') return 0;
+    const all = Array.from(svg.querySelectorAll('[class]')).filter((el) => LIFT_CLS.test(el.getAttribute('class')));
+    const outer = all.filter((el) => !all.some((o) => o !== el && o.contains(el)));
+    const rs = svg.getScreenCTM();
+    if (!rs) return 0;
+    const inv = rs.inverse(), M = 16;
+    let n = 0;
+    const stars = []; // Sterne funkeln in vier Gruppen statt jeder für sich (dutzende Ebenen weniger, gleiches Bild)
+    for (const el of outer) {
+      const cls = el.getAttribute('class'), vars = el.getAttribute('style') || '';
+      const cs = global.getComputedStyle(el), tb = cs.transformBox, to = cs.transformOrigin;
+      const inherited = LIFT_KEEP.map((k) => [k, el.hasAttribute(k) ? null : cs.getPropertyValue(k)]);
+      let op = 1;
+      for (let a = el.parentNode; a && a !== svg; a = a.parentNode) op *= parseFloat(global.getComputedStyle(a).opacity) || 0;
+      el.setAttribute('class', '');
+      let bb = null, em = null, pm = null;
+      try { bb = el.getBBox(); em = el.getScreenCTM(); pm = el.parentNode.getScreenCTM(); } catch (e) { bb = null; }
+      if (!bb || !em || !pm || !(bb.width + bb.height > 0)) { el.setAttribute('class', cls); continue; }
+      const m = inv.multiply(em), pmat = inv.multiply(pm);
+      const pts = [[bb.x, bb.y], [bb.x + bb.width, bb.y], [bb.x, bb.y + bb.height], [bb.x + bb.width, bb.y + bb.height]]
+        .map(([x, y]) => new DOMPoint(x, y).matrixTransform(m));
+      const x0 = Math.min(...pts.map((q) => q.x)) - M, y0 = Math.min(...pts.map((q) => q.y)) - M;
+      const w = Math.max(...pts.map((q) => q.x)) + M - x0, h = Math.max(...pts.map((q) => q.y)) + M - y0;
+      let ox = w / 2, oy = h / 2;
+      if (tb === 'fill-box') {
+        const [a, b] = String(to).split(' ').map(parseFloat);
+        const q = new DOMPoint(bb.x + (a || 0), bb.y + (b || 0)).matrixTransform(m);
+        ox = q.x - x0; oy = q.y - y0;
+      }
+      for (const [k, v] of inherited) if (v) el.style.setProperty(k, v);
+      for (const part of vars.split(';')) { const k = part.split(':')[0].trim(); if (k.startsWith('--')) el.style.removeProperty(k); }
+      if (LIFT_OPACITY.test(cls)) el.removeAttribute('opacity');
+      if (/(^|\s)bo-a-star(\s|$)/.test(cls)) {
+        const sv = {}; for (const part of vars.split(';')) { const kv = part.split(':'); const k = (kv[0] || '').trim(); if (k.startsWith('--')) sv[k.slice(2)] = parseFloat(kv[1]); }
+        el.setAttribute('opacity', sv.o != null ? sv.o : 1);
+        stars.push({ el, x0, y0, x1: x0 + w, y1: y0 + h, pmat, dur: sv.dur || 3 });
+        continue;
+      }
+      const layer = document.createElement('div');
+      layer.className = 'bo-al';
+      layer.setAttribute('style', `left:${x0}px;top:${y0}px;width:${w}px;height:${h}px;transform-origin:${ox}px ${oy}px`);
+      const kind = (/bo-(p-[a-z]+|a-[a-z]+)/.exec(cls) || [])[1] || '', v = {};
+      for (const part of vars.split(';')) { const kv = part.split(':'); const k = (kv[0] || '').trim(); if (k.startsWith('--')) v[k.slice(2)] = parseFloat(kv[1]); }
+      layer._an = { kind, v, cls };
+      if (kind === 'a-ray' || kind === 'a-star') layer.style.opacity = v.o != null ? v.o : 1;
+      if (kind === 'a-flash') layer.style.opacity = 0;
+      const s2 = document.createElementNS(SVGNS, 'svg');
+      s2.setAttribute('width', w); s2.setAttribute('height', h); s2.setAttribute('viewBox', `${x0} ${y0} ${w} ${h}`);
+      s2.setAttribute('aria-hidden', 'true'); s2.setAttribute('focusable', 'false');
+      const g = document.createElementNS(SVGNS, 'g');
+      g.setAttribute('transform', `matrix(${pmat.a} ${pmat.b} ${pmat.c} ${pmat.d} ${pmat.e} ${pmat.f})`);
+      if (op < 1) g.setAttribute('opacity', op);
+      g.appendChild(el);
+      s2.appendChild(g); layer.appendChild(s2); box.appendChild(layer);
+      n++;
+    }
+    const G = Math.min(4, stars.length);
+    for (let gi = 0; gi < G; gi++) {
+      const mem = stars.filter((_, i) => i % G === gi);
+      const x0 = Math.min(...mem.map((q) => q.x0)), y0 = Math.min(...mem.map((q) => q.y0));
+      const w = Math.max(...mem.map((q) => q.x1)) - x0, h = Math.max(...mem.map((q) => q.y1)) - y0;
+      const dur = mem.reduce((a, q) => a + q.dur, 0) / mem.length;
+      const layer = document.createElement('div');
+      layer.className = 'bo-al';
+      layer.setAttribute('style', `left:${x0}px;top:${y0}px;width:${w}px;height:${h}px`);
+      layer._an = { kind: 'a-stars', v: { o: 1, dur, del: -dur * gi / G }, cls: 'bo-a-star' };
+      const s2 = document.createElementNS(SVGNS, 'svg');
+      s2.setAttribute('width', w); s2.setAttribute('height', h); s2.setAttribute('viewBox', `${x0} ${y0} ${w} ${h}`);
+      s2.setAttribute('aria-hidden', 'true'); s2.setAttribute('focusable', 'false');
+      for (const q of mem) {
+        const g = document.createElementNS(SVGNS, 'g');
+        g.setAttribute('transform', `matrix(${q.pmat.a} ${q.pmat.b} ${q.pmat.c} ${q.pmat.d} ${q.pmat.e} ${q.pmat.f})`);
+        g.appendChild(q.el); s2.appendChild(g);
+      }
+      layer.appendChild(s2); box.appendChild(layer);
+      n++;
+    }
+    return n;
+  }
+  // Patch 8.1: die Bewegungen der gehobenen Ebenen als Web Animations mit festen Werten. CSS-Keyframes mit Variablen
+  // (var(--dx) ...) rechnet der Browser in jedem Bild auf dem Hauptthread neu, feste Werte gibt er an die Grafikkarte.
+  // Dieselben Bewegungen wie die Keyframes bo-rise ... bo-sway oben, mit der Zeitkurve wie in CSS je Abschnitt.
+  const AN = {
+    'p-rise': { e: 'linear', k: (v) => [{ transform: 'translate(0px,0px)', opacity: 0 }, { opacity: v.o, offset: 0.15 }, { opacity: v.o, offset: 0.8 }, { transform: `translate(${v.dx || 0}px,${v.dy || 0}px)`, opacity: 0 }] },
+    'p-fall': { e: 'linear', k: (v) => [{ transform: 'translate(0px,0px) rotate(0deg)', opacity: 0 }, { opacity: v.o, offset: 0.1 }, { opacity: v.o, offset: 0.85 }, { transform: `translate(${v.dx || 0}px,${v.dy || 0}px) rotate(${v.rot || 0}deg)`, opacity: 0 }] },
+    'p-twinkle': { e: 'ease-in-out', k: (v) => [{ transform: 'scale(.3)', opacity: 0 }, { transform: 'scale(1)', opacity: v.o, offset: 0.5 }, { transform: 'scale(.3)', opacity: 0 }] },
+    'p-wander': { e: 'ease-in-out', alt: true, k: (v) => [{ transform: 'translate(0px,0px)', opacity: 0.25 }, { opacity: v.o, offset: 0.5 }, { transform: `translate(${v.dx || 0}px,${v.dy || 0}px)`, opacity: 0.4 }] },
+    'p-ring': { e: 'ease-out', k: (v) => [{ transform: 'scale(.35)', opacity: 0 }, { opacity: v.o, offset: 0.15 }, { transform: 'scale(1.4)', opacity: 0 }] },
+    'p-streak': { e: 'linear', k: (v) => [{ transform: 'translate(0px,0px)', opacity: 0 }, { opacity: v.o, offset: 0.2 }, { opacity: v.o, offset: 0.8 }, { transform: `translate(${v.dx || 0}px,0px)`, opacity: 0 }] },
+    'a-ray': { e: 'ease-in-out', dur: 7, k: (v) => [{ opacity: v.o }, { opacity: v.o * 0.45, offset: 0.5 }, { opacity: v.o }] },
+    'a-glow': { e: 'ease-in-out', dur: 2.8, k: () => [{ opacity: 1 }, { opacity: 0.55, offset: 0.5 }, { opacity: 1 }] },
+    'a-flame': { e: 'ease-in-out', dflt: 1.4, k: () => [{ transform: 'scale(1,1) skewX(0deg)' }, { transform: 'scale(.95,1.1) skewX(3deg)', offset: 0.3 }, { transform: 'scale(1.04,.92) skewX(-3deg)', offset: 0.6 }, { transform: 'scale(1,1) skewX(0deg)' }] },
+    'a-wave': { e: 'linear', dflt: 16, noDel: true, k: (v) => [{ transform: 'translateX(0px)' }, { transform: `translateX(${v.dx || 0}px)` }] },
+    'a-flash': { e: 'linear', dflt: 4.6, k: () => [{ opacity: 0 }, { opacity: 1, offset: 0.03 }, { opacity: 0.25, offset: 0.05 }, { opacity: 0.95, offset: 0.08 }, { opacity: 0, offset: 0.13 }, { opacity: 0 }] },
+    'a-ripple': { e: 'ease-out', dur: 4.5, k: () => [{ transform: 'scale(.88)', opacity: 0.5 }, { transform: 'scale(1.16)', opacity: 0 }] },
+    'a-pulse': { e: 'ease-in-out', dur: 3.6, k: () => [{ transform: 'scale(.97)', opacity: 0.55 }, { transform: 'scale(1.03)', opacity: 1, offset: 0.5 }, { transform: 'scale(.97)', opacity: 0.55 }] },
+    'a-drift': { e: 'ease-in-out', dflt: 20, alt: true, k: (v) => [{ transform: 'translateX(0px)' }, { transform: `translateX(${v.dx != null ? v.dx : 20}px)` }] },
+    'a-spin': { e: 'linear', dflt: 30, noDel: true, k: (v) => [{ transform: 'rotate(0deg)' }, { transform: `rotate(${v.turn != null ? v.turn : 360}deg)` }] },
+    'a-bob': { e: 'ease-in-out', dflt: 4, alt: true, k: (v) => [{ transform: 'translateY(0px)' }, { transform: `translateY(${v.dy != null ? v.dy : -8}px)` }] },
+    'a-star': { e: 'ease-in-out', dflt: 3, k: (v) => [{ opacity: v.o }, { opacity: v.o * 0.25, offset: 0.5 }, { opacity: v.o }] },
+    'a-stars': { e: 'ease-in-out', dflt: 3, k: () => [{ opacity: 1 }, { opacity: 0.25, offset: 0.5 }, { opacity: 1 }] },
+    'a-sway': { e: 'ease-in-out', dflt: 5, alt: true, k: () => [{ transform: 'rotate(-4deg)' }, { transform: 'rotate(4deg)' }] },
+  };
+  function startAmbient(boxes) {
+    const out = [];
+    for (const box of boxes) for (const layer of box.children) {
+      const a = layer._an; if (!a) continue;
+      const d = AN[a.kind], v = Object.assign({ o: 1 }, a.v);
+      if (!d || !layer.animate) { layer.className = 'bo-al ' + a.cls; continue; } // unbekannt: wie bisher über CSS
+      const kf = d.k(v).map((f, i, all) => (i < all.length - 1 ? Object.assign({ easing: d.e }, f) : f));
+      const dur = (d.dur || v.dur || d.dflt || 4) * 1000, del = d.noDel ? 0 : (v.del || 0) * 1000;
+      try { out.push(layer.animate(kf, { duration: dur, delay: del, iterations: Infinity, direction: d.alt ? 'alternate' : 'normal' })); } catch (e) { layer.className = 'bo-al ' + a.cls; }
+    }
+    return out;
+  }
 
   /* ------------------------------------------------------------------ */
   /* Styles                                                               */
@@ -3276,9 +3466,9 @@ font-family:var(--bo-font,inherit);-webkit-user-select:none;user-select:none;-we
 .bo-name{font-weight:700;font-size:17px;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
 .bo-lv{font-size:16px;color:#dfe2fa;white-space:nowrap}
 .bo-hp{position:relative;height:10px;margin:7px 0 6px;border-radius:99px;background:#0a0c1a;box-shadow:inset 0 0 0 1px rgba(255,255,255,.07);overflow:hidden}
-.bo-hp i{position:absolute;left:0;top:0;bottom:0;width:100%;border-radius:inherit}
-.bo-hp-trail{background:rgba(255,255,255,.6);transition:width .8s ease .3s}
-.bo-hp-fill{background:var(--bo-hp);transition:width .3s ease,background-color .3s}
+.bo-hp i{position:absolute;left:0;top:0;bottom:0;width:100%;border-radius:0;transform-origin:0 50%}
+.bo-hp-trail{background:rgba(255,255,255,.6);transition:transform .8s ease .3s}
+.bo-hp-fill{background:var(--bo-hp);transition:transform .3s ease}
 .bo-hp[data-level="mid"] .bo-hp-fill{background:var(--bo-hp-mid)}
 .bo-hp[data-level="low"] .bo-hp-fill{background:var(--bo-hp-low)}
 .bo-hp-tick{position:absolute;top:0;bottom:0;width:2px;margin-left:-1px;background:rgba(8,9,20,.85);z-index:2}
@@ -3300,12 +3490,19 @@ border:1.5px solid var(--bo-glow);box-shadow:0 0 0 1px rgba(0,0,0,.45),0 0 16px 
 .bo-mon--player{z-index:3}
 .bo-mon-fx{width:100%;height:100%}
 .bo-mon img{display:block;width:100%;height:100%;object-fit:contain;image-rendering:auto}
-.bo-mon--boss img{filter:drop-shadow(0 0 12px var(--bo-glow-a55)) drop-shadow(0 8px 10px rgba(0,0,0,.45));animation:bo-idle 3.8s ease-in-out infinite}
-.bo-mon--player img{transform:scaleX(-1);filter:drop-shadow(0 8px 8px rgba(0,0,0,.5))}
+.bo-mon-fx{position:relative}
+.bo-mon img.is-pix{object-fit:fill;image-rendering:-moz-crisp-edges;image-rendering:crisp-edges;image-rendering:pixelated}
+.bo-flash{position:absolute;left:0;top:0;opacity:0;visibility:hidden;pointer-events:none}
+.bo-flash[data-c="white"]{filter:brightness(0) invert(1)}
+.bo-flash[data-c="gold"]{filter:brightness(0) invert(62%) sepia(14%) saturate(1378%) hue-rotate(345deg) brightness(112%) contrast(200%)}
+.bo-flash[data-c="red"]{filter:brightness(0) invert(24%) sepia(59%) saturate(4375%) hue-rotate(347deg) brightness(167%) contrast(108%)}
+.bo-flash[data-c="sil"]{filter:brightness(0)}
+.bo-halo{position:absolute;border-radius:50%;pointer-events:none;z-index:1}
+.bo-halo--boss{background:radial-gradient(closest-side,var(--bo-glow-a40),var(--bo-glow-a14) 60%,transparent)}
+.bo-halo--player{background:radial-gradient(closest-side,rgba(255,255,255,.36),rgba(255,255,255,.13) 58%,transparent)}
+.bo-impact{position:absolute;width:120px;height:120px;margin:-60px 0 0 -60px;border-radius:50%;pointer-events:none;z-index:4;opacity:0;
+background:radial-gradient(closest-side,rgba(255,240,170,0),rgba(255,226,110,.9) 62%,rgba(255,213,74,0) 72%)}
 .bo-shadow{position:absolute;border-radius:50%;background:radial-gradient(closest-side,rgba(0,0,0,.55),rgba(0,0,0,0));pointer-events:none;z-index:1}
-.bo-silhouette{filter:brightness(0) drop-shadow(0 0 10px var(--bo-glow))}
-.bo-reveal{animation:bo-reveal .8s ease-out}
-.bo-hitfx{animation:bo-hit .3s ease-out}
 .bo-banner{position:absolute;left:10px;top:12px;z-index:5;display:flex;align-items:center;max-width:calc(100% - 20px);pointer-events:none;transform-origin:0 0}
 .bo-hex{position:relative;flex:none;width:52px;height:58px;filter:drop-shadow(0 0 7px var(--bo-glow-a80))}
 .bo-hex::before,.bo-hex::after{content:"";position:absolute;clip-path:polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%)}
@@ -3332,7 +3529,7 @@ background:linear-gradient(90deg,var(--bo-deep-a90),var(--bo-panel) 70%);border:
 .bo-msg{flex:none;padding:12px 16px;border-radius:16px;background:var(--bo-panel);border:1px solid var(--bo-line);font-size:15px;line-height:1.35;min-height:46px}
 .bo-actions{display:flex;gap:8px;flex:none}
 .bo-btn{flex:1 1 0;min-width:0;height:50px;padding:0 10px;border-radius:16px;border:1px solid var(--bo-line-2);background:var(--bo-panel-2);color:var(--bo-text);
-font:inherit;font-weight:700;font-size:15px;display:flex;align-items:center;justify-content:center;gap:7px;cursor:pointer;white-space:nowrap;transition:transform .1s,background-color .2s}
+font:inherit;font-weight:700;font-size:15px;display:flex;align-items:center;justify-content:center;gap:7px;cursor:pointer;white-space:nowrap;transition:transform .1s}
 .bo-btn b{font-weight:400;font-size:15px;color:#cfd3f2}
 .bo-btn--quit{flex:0 0 auto;padding:0 16px}
 .bo-btn:active{transform:scale(.97)}
@@ -3385,19 +3582,16 @@ font:inherit;font-weight:700;font-size:15px;display:flex;align-items:center;just
 @keyframes bo-bob{to{transform:translateY(var(--dy,-8px))}}
 @keyframes bo-star{0%,100%{opacity:var(--o)}50%{opacity:calc(var(--o) * .25)}}
 @keyframes bo-sway{from{transform:rotate(-4deg)}to{transform:rotate(4deg)}}
-@keyframes bo-idle{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
-@keyframes bo-reveal{0%{filter:brightness(3.5) saturate(0)}100%{filter:brightness(1) saturate(1)}}
-@keyframes bo-hit{0%{transform:translateX(0);filter:brightness(2.2)}30%{transform:translateX(-5px)}60%{transform:translateX(4px);filter:brightness(1.4)}100%{transform:translateX(0);filter:brightness(1)}}
 @keyframes bo-shake{0%,100%{transform:translate(0,0)}20%{transform:translate(-4px,2px)}40%{transform:translate(4px,-2px)}60%{transform:translate(-3px,1px)}80%{transform:translate(2px,-1px)}}
 @keyframes bo-kick{0%{opacity:1}50%{opacity:.35}}
-/* Patch 8: Kampfmechanik */
+/* Patch 8: Kampfmechanik (Patch 8.1: Balken über transform, ruhiger Infobereich, kurzes Phasenbanner) */
 .bo-side{display:flex;align-items:baseline;gap:8px;flex:none}
 .bo-phase{font-size:10.5px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--bo-light);padding:2px 7px 1px;border-radius:7px;border:1px solid var(--bo-glow-a55);background:var(--bo-deep-a90);white-space:nowrap;align-self:center}
 .bo-phase[data-last="1"]{color:#fff;border-color:rgba(239,91,91,.8);box-shadow:0 0 10px rgba(239,91,91,.4)}
 .bo-sub{display:flex;align-items:center;gap:10px}
 .bo-team:empty{display:none}
 .bo-spec{position:relative;flex:1;min-width:24px;max-width:150px;height:5px;border-radius:99px;background:#0a0c1a;box-shadow:inset 0 0 0 1px rgba(255,255,255,.07);overflow:hidden}
-.bo-spec i{position:absolute;left:0;top:0;bottom:0;width:0;border-radius:inherit;background:var(--bo-hp-mid);transition:width .1s}
+.bo-spec i{position:absolute;left:0;top:0;bottom:0;width:100%;transform:scaleX(0);transform-origin:0 50%;background:var(--bo-hp-mid);transition:transform .1s}
 .bo-spec.is-ready i{background:#ff8a5c;box-shadow:0 0 8px #ff8a5c}
 .bo-spec-ic{flex:none;width:12px;height:12px;color:var(--bo-sub)}
 .bo-spec.is-ready + .bo-kp,.bo-sub .bo-spec-ic.is-ready{color:#ffb08c}
@@ -3414,12 +3608,12 @@ font:inherit;font-weight:700;font-size:15px;display:flex;align-items:center;just
 .bo-mate-ic{position:absolute;inset:1px 1px 5px;display:grid;place-items:center;pointer-events:none;overflow:hidden}
 .bo-mate-ic img,.bo-mate-ic svg{max-width:100%;max-height:100%;object-fit:contain}
 .bo-mate-hp{position:absolute;left:5px;right:5px;bottom:3px;height:3px;border-radius:2px;background:#0a0c1a;overflow:hidden;pointer-events:none}
-.bo-mate-hp i{position:absolute;left:0;top:0;bottom:0;border-radius:inherit;background:var(--bo-hp)}
+.bo-mate-hp i{position:absolute;left:0;top:0;bottom:0;width:100%;transform-origin:0 50%;background:var(--bo-hp)}
 .bo-mate-hp[data-level="mid"] i{background:var(--bo-hp-mid)}
 .bo-mate-hp[data-level="low"] i{background:var(--bo-hp-low)}
 .bo-pills{position:absolute;z-index:5;display:flex;flex-direction:column;align-items:flex-start;gap:4px;pointer-events:none;max-width:60%}
 .bo-pills--boss{left:12px;top:84px}
-.bo-pills--player{left:10px;bottom:10px}
+.bo-pills--player{right:10px;bottom:10px;align-items:flex-end}
 .bo-pill{font-size:10.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;line-height:1.25;padding:3px 8px;border-radius:8px;white-space:nowrap;
 background:rgba(8,9,22,.82);border:1px solid var(--bo-line-2);color:var(--bo-text);box-shadow:0 2px 6px rgba(0,0,0,.35)}
 .bo-pill[data-tone="boss"]{border-color:var(--bo-glow);color:var(--bo-light);box-shadow:0 0 10px var(--bo-glow-a40)}
@@ -3428,40 +3622,47 @@ background:rgba(8,9,22,.82);border:1px solid var(--bo-line-2);color:var(--bo-tex
 .bo-pill[data-tone="gold"]{border-color:rgba(242,201,76,.8);color:#ffe9a8}
 .bo-floats{position:absolute;inset:0;z-index:7;pointer-events:none;overflow:hidden}
 .bo-float{position:absolute;font-family:var(--bo-font-num,inherit);font-weight:700;font-size:19px;line-height:1;white-space:nowrap;color:#fff;
-text-shadow:0 2px 0 rgba(0,0,0,.6),0 0 8px rgba(0,0,0,.5);animation:bo-float .95s ease-out forwards}
-.bo-float[data-tone="crit"]{color:#ffd54a;font-size:25px}
+text-shadow:0 2px 0 rgba(0,0,0,.6),0 0 8px rgba(0,0,0,.5);animation:bo-float .9s ease-out forwards}
+.bo-float[data-tone="crit"]{color:#ffd54a;font-size:24px}
 .bo-float[data-tone="hurt"]{color:#ff8a84}
-.bo-float[data-tone="big"]{color:#ff6b63;font-size:27px}
+.bo-float[data-tone="big"]{color:#ff6b63;font-size:26px}
 .bo-float[data-tone="heal"]{color:var(--bo-hp)}
 .bo-float[data-tone="info"]{color:#bfe6ff;font-family:var(--bo-font,inherit);font-size:14px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}
 .bo-float[data-tone="good"]{color:#9df0bf;font-family:var(--bo-font,inherit);font-size:16px;font-weight:800;letter-spacing:.06em;text-transform:uppercase}
-.bo-pban{position:absolute;left:0;right:0;top:34%;z-index:8;display:flex;justify-content:center;pointer-events:none;opacity:0}
-.bo-pban.is-on{opacity:1;animation:bo-pban 2.2s ease-out forwards}
-.bo-pban-in{display:flex;flex-direction:column;align-items:center;padding:8px 26px 9px;transform:skewX(-12deg);background:linear-gradient(90deg,transparent,var(--bo-deep-a95) 18%,var(--bo-deep-a95) 82%,transparent);border-top:1.5px solid var(--bo-glow);border-bottom:1.5px solid var(--bo-glow);box-shadow:0 0 22px var(--bo-glow-a55)}
-.bo-pban-in b{transform:skewX(12deg);font-size:30px;line-height:1.05;font-weight:800;font-style:italic;text-transform:uppercase;letter-spacing:.04em;text-shadow:0 0 14px var(--bo-glow-a80),0 2px 0 rgba(0,0,0,.45)}
-.bo-pban-in span{transform:skewX(12deg);font-size:13px;font-weight:700;color:var(--bo-light);margin-top:2px;text-align:center}
-.bo-counter .bo-stage{border-color:#ffd54a;box-shadow:0 0 0 1px rgba(0,0,0,.45),0 0 18px rgba(255,213,74,.7),0 0 46px rgba(255,213,74,.35)}
-.bo-counter .bo-stage::after{box-shadow:inset 0 0 34px rgba(255,213,74,.55),inset 0 0 0 1px rgba(255,255,255,.12)}
-.bo-msg{position:relative;height:66px;display:flex;flex-direction:column;justify-content:center}
-.bo-msg-text{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.bo-meter{display:flex;flex-direction:column;gap:7px}
-.bo-meter-top{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
-.bo-meter-top b{font-weight:800;font-size:15px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.bo-meter-top span{flex:none;font-size:12.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--bo-sub)}
-.bo-meter-bar{position:relative;height:12px;border-radius:99px;background:#0a0c1a;box-shadow:inset 0 0 0 1px rgba(255,255,255,.08);overflow:hidden}
+.bo-pban{position:absolute;left:10px;right:10px;top:12px;z-index:8;display:flex;justify-content:center;pointer-events:none;opacity:0}
+.bo-pban.is-on{animation:bo-pban 1.1s ease-out forwards}
+.bo-pban-in{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:70px;padding:6px 18px 7px;transform:skewX(-10deg);background:linear-gradient(90deg,var(--bo-deep-a95),var(--bo-mid-a90) 50%,var(--bo-deep-a95));border:1.5px solid var(--bo-glow);border-radius:4px;box-shadow:0 0 22px var(--bo-glow-a55)}
+.bo-pban-in b{transform:skewX(10deg);font-size:26px;line-height:1.05;font-weight:800;font-style:italic;text-transform:uppercase;letter-spacing:.04em;text-shadow:0 0 14px var(--bo-glow-a80),0 2px 0 rgba(0,0,0,.45)}
+.bo-pban-in span{transform:skewX(10deg);font-size:12.5px;font-weight:700;color:var(--bo-light);margin-top:2px;text-align:center;white-space:nowrap}
+.bo-cframe{position:absolute;inset:0;border-radius:inherit;pointer-events:none;z-index:6;opacity:0;transition:opacity .2s;box-shadow:inset 0 0 0 2px #ffd54a,inset 0 0 30px rgba(255,213,74,.6),inset 0 0 70px rgba(255,213,74,.22)}
+.bo-counter .bo-cframe{opacity:1;animation:bo-cpulse .8s ease-in-out infinite alternate}
+.bo-csum{position:absolute;right:12px;top:14px;z-index:7;pointer-events:none;display:flex;flex-direction:column;align-items:flex-end;padding:5px 11px 6px;border-radius:12px;
+background:rgba(22,17,4,.86);border:1px solid rgba(255,213,74,.75);box-shadow:0 0 14px rgba(255,213,74,.35);opacity:0;transform:translateY(-6px);transition:opacity .2s,transform .2s}
+.bo-csum.is-on{opacity:1;transform:none}
+.bo-csum small{font-size:10px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:#ffe08a;line-height:1.2}
+.bo-csum b{font-family:var(--bo-font-num,inherit);font-size:22px;line-height:1.05;color:#ffd54a;font-variant-numeric:tabular-nums}
+.bo-msg{position:relative;height:74px;padding:7px 14px;display:flex;flex-direction:column;justify-content:space-between;contain:layout paint}
+.bo-info-top{display:flex;justify-content:space-between;align-items:baseline;gap:10px;height:18px;line-height:18px}
+.bo-info-top b{font-weight:800;font-size:15px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bo-info-top span{flex:none;font-size:13px;font-weight:800;letter-spacing:.02em;color:var(--bo-sub);font-variant-numeric:tabular-nums}
+.bo-info-sub{height:32px;padding-bottom:2px;font-size:13px;line-height:15px;color:var(--bo-sub);overflow:hidden;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2}
+.bo-msg[data-long] .bo-info-top b{font-size:13px}
+.bo-msg[data-long] .bo-info-top span{font-size:12px}
+.bo-meter-bar{position:relative;height:8px;border-radius:99px;background:#0a0c1a;box-shadow:inset 0 0 0 1px rgba(255,255,255,.08);overflow:hidden}
 .bo-meter-bar i{position:absolute;top:0;bottom:0;left:0}
 .bo-meter-zone{background:rgba(78,214,132,.32);box-shadow:inset 0 0 0 1.5px rgba(78,214,132,.85)}
-.bo-meter-fill{width:0;border-radius:inherit;background:linear-gradient(90deg,#f2c94c,#ff7a45)}
-.bo-meter[data-kind="counter"] .bo-meter-fill{background:linear-gradient(90deg,#ffe58a,#ffc21a)}
-.bo-meter[data-kind="counter"] .bo-meter-top b{color:#ffe08a}
-.bo-meter[data-kind="geo"] .bo-meter-fill{background:linear-gradient(90deg,var(--bo-glow),var(--bo-light))}
-.bo-meter[data-tone="now"] .bo-meter-top span{color:#7cf0a8}
-.bo-meter[data-tone="now"] .bo-meter-fill{background:linear-gradient(90deg,#f2c94c,#4ed684)}
-.bo-meter[data-tone="done"] .bo-meter-top span{color:#7cf0a8}
-.bo-meter[data-tone="early"] .bo-meter-top span{color:#ff8a84}
+.bo-meter-fill{width:100%;transform:scaleX(0);transform-origin:0 50%;background:linear-gradient(90deg,#f2c94c,#ff7a45)}
+.bo-msg[data-kind="idle"] .bo-meter-bar{opacity:.35}
+.bo-msg[data-kind="counter"] .bo-meter-fill{background:linear-gradient(90deg,#ffe58a,#ffc21a)}
+.bo-msg[data-kind="counter"] .bo-info-top b{color:#ffe08a}
+.bo-msg[data-kind="geo"] .bo-meter-fill{background:linear-gradient(90deg,var(--bo-glow),var(--bo-light))}
+.bo-msg[data-tone="now"] .bo-info-top span{color:#7cf0a8}
+.bo-msg[data-tone="now"] .bo-meter-fill{background:linear-gradient(90deg,#f2c94c,#4ed684)}
+.bo-msg[data-tone="done"] .bo-info-top span{color:#7cf0a8}
+.bo-msg[data-tone="early"] .bo-info-top span{color:#ff8a84}
 .bo-dodgerow{flex:none;display:flex}
 .bo-dodge{flex:1;min-width:0;height:58px;border-radius:18px;border:1.5px solid var(--bo-line-2);background:var(--bo-panel-2);color:var(--bo-sub);font:inherit;font-weight:800;font-size:18px;letter-spacing:.08em;text-transform:uppercase;
-display:flex;align-items:center;justify-content:center;gap:10px;cursor:pointer;touch-action:manipulation;transition:background-color .15s,border-color .15s,color .15s,box-shadow .15s,transform .08s}
+display:flex;align-items:center;justify-content:center;gap:10px;cursor:pointer;touch-action:manipulation;transition:transform .08s}
 .bo-dodge svg{width:22px;height:22px;flex:none}
 .bo-dodge:focus-visible{outline:2px solid var(--bo-glow);outline-offset:2px}
 .bo-dodge[data-state="wait"]{color:#ffe08a;border-color:rgba(242,201,76,.7);background:#2a2614}
@@ -3470,17 +3671,38 @@ display:flex;align-items:center;justify-content:center;gap:10px;cursor:pointer;t
 .bo-dodge[data-state="early"]{color:#ffd2cf;border-color:rgba(239,91,91,.85);background:#3a1717}
 .bo-dodge:active{transform:scale(.98)}
 .bo-btn.is-confirm{background:#4a1c1c;border-color:rgba(239,91,91,.8);color:#ffd2cf}
-.bo-swapin{animation:bo-swapin .45s ease-out}
-.bo-hurtfx{animation:bo-hurt .35s ease-out}
 .bo-intro-note{position:absolute;left:18px;right:18px;text-align:center;pointer-events:none}
 .bo-intro-note b{display:block;font-size:11px;font-weight:800;letter-spacing:.3em;text-transform:uppercase;color:var(--bo-light)}
 .bo-intro-note span{display:block;margin-top:6px;font-size:15px;line-height:1.4;font-weight:700;color:#fff;text-shadow:0 2px 6px rgba(0,0,0,.8)}
+.bo-lift{position:absolute;left:0;top:0;width:400px;height:440px;transform-origin:0 0;pointer-events:none}
+.bo-lift--fx{z-index:4}
+.bo-al{position:absolute;display:block}
+.bo-al > svg{display:block;overflow:visible}
 @keyframes bo-float{0%{transform:translate(-50%,0) scale(.8);opacity:0}15%{opacity:1;transform:translate(-50%,-10px) scale(1.08)}100%{transform:translate(-50%,-62px) scale(1);opacity:0}}
-@keyframes bo-pban{0%{opacity:0;transform:scale(1.35)}12%{opacity:1;transform:scale(1)}78%{opacity:1}100%{opacity:0}}
+@keyframes bo-pban{0%{opacity:0;transform:translateY(-6px) scale(1.12)}14%{opacity:1;transform:none}72%{opacity:1;transform:none}100%{opacity:0;transform:none}}
 @keyframes bo-now{from{transform:scale(1)}to{transform:scale(1.025)}}
-@keyframes bo-swapin{0%{opacity:0;transform:translateX(-24px)}100%{opacity:1;transform:none}}
-@keyframes bo-hurt{0%{filter:brightness(2.4) saturate(.4)}40%{transform:translateX(-6px)}70%{transform:translateX(4px)}100%{filter:none;transform:none}}
-@media (max-height:720px){.bo{gap:8px;padding-top:8px;padding-bottom:10px}.bo-panel{padding:8px 12px 7px}.bo-msg{padding:8px 14px;height:58px;font-size:14px}.bo-dodge{height:52px}.bo-btn{height:46px}.bo-mate{height:32px}.bo-bossbar{padding:8px 12px 7px 9px}.bo-stage{min-height:200px}}
+@keyframes bo-cpulse{from{opacity:1}to{opacity:.55}}
+/* Patch 8.1: flache Arena: kleineres Namensbanner, die Konter-Summe steht dann nur im Infobereich */
+.bo--short .bo-banner{left:8px;top:8px}
+.bo--short .bo-hex{width:38px;height:42px}
+.bo--short .bo-plate{margin-left:-8px;padding:4px 16px 5px 15px}
+.bo--short .bo-kicker{font-size:8.5px;letter-spacing:.24em}
+.bo--short .bo-bname{font-size:18px}
+.bo--short .bo-bname.is-long{font-size:16px}
+.bo--short .bo-types{gap:8px;margin-top:2px}
+.bo--short .bo-chip{font-size:9px;gap:3px}
+.bo--short .bo-chip svg{width:10px;height:10px}
+.bo--short .bo-pills--boss{left:10px;top:auto;bottom:10px;flex-direction:column-reverse}
+.bo--short .bo-pban-in{min-height:50px;padding:4px 14px 5px}
+.bo--short .bo-pban-in b{font-size:20px}
+.bo--short .bo-pban-in span{font-size:11.5px}
+.bo--short .bo-csum{display:none}
+/* Patch 8.1: auf schmalen Handys steht die Anzahl unter dem Namen, damit „Supertrank 3/3“ in den Knopf passt */
+@media (max-width:400px){.bo-btn:not(.bo-btn--quit){flex-direction:column;gap:1px;padding:0 6px;font-size:13.5px;line-height:1.1}.bo-btn:not(.bo-btn--quit) b{font-size:12.5px}.bo-btn--quit{padding:0 12px;font-size:14px}}
+/* Patch 8.1: der Ladehinweis erscheint erst, wenn das Laden wirklich dauert; vorgeladene Bilder sind vorher da */
+.bo-state[role="status"]{animation:bo-statein .25s .4s both}
+@keyframes bo-statein{from{opacity:0}to{opacity:1}}
+@media (max-height:720px){.bo{gap:8px;padding-top:8px;padding-bottom:10px}.bo-panel{padding:8px 12px 7px}.bo-msg{padding:6px 14px;height:68px}.bo-info-top{height:17px;line-height:17px}.bo-info-sub{height:30px;font-size:12.5px;line-height:14px}.bo-meter-bar{height:7px}.bo-dodge{height:52px}.bo-btn{height:46px}.bo-mate{height:32px}.bo-bossbar{padding:8px 12px 7px 9px}.bo-stage{min-height:200px}}
 @media (prefers-reduced-motion:reduce){.bo *,.bo *::before,.bo *::after{animation:none!important;transition:none!important}}
 `;
 
@@ -3568,11 +3790,16 @@ display:flex;align-items:center;justify-content:center;gap:10px;cursor:pointer;t
 </div>
 <div class="bo-stage" data-ref="stage" role="button" tabindex="0" aria-label="${esc(boss.name)} angreifen">
   ${buildScene(boss.types, uid, boss.id)}
+  <div class="bo-lift" data-ref="lift" aria-hidden="true"></div>
   <div class="bo-shadow" data-ref="bshadow"></div>
   <div class="bo-shadow" data-ref="pshadow"></div>
+  <div class="bo-halo bo-halo--boss" data-ref="bhalo"></div>
+  <div class="bo-halo bo-halo--player" data-ref="phalo"></div>
   <div class="bo-mon bo-mon--boss" data-ref="boss"><div class="bo-mon-fx" data-ref="bossfx"></div></div>
   <div class="bo-mon bo-mon--player" data-ref="player"><div class="bo-mon-fx" data-ref="playerfx"></div></div>
   ${buildFx(boss.types, uid, boss.id)}
+  <div class="bo-lift bo-lift--fx" data-ref="liftfx" aria-hidden="true"></div>
+  <div class="bo-impact" data-ref="impact" aria-hidden="true"></div>
   <div class="bo-banner" data-ref="banner" aria-label="${esc(T.boss)} ${esc(boss.name)}, Typ ${esc(typeLabel)}">
     <div class="bo-hex">${iconSvg(t1)}</div>
     <div class="bo-plate"><div class="bo-plate-in">
@@ -3583,6 +3810,8 @@ display:flex;align-items:center;justify-content:center;gap:10px;cursor:pointer;t
   </div>
   <div class="bo-pills bo-pills--boss" data-ref="bpills"></div>
   <div class="bo-pills bo-pills--player" data-ref="ppills"></div>
+  <div class="bo-cframe" aria-hidden="true"></div>
+  <div class="bo-csum" data-ref="csum" aria-hidden="true"><small data-ref="csuml"></small><b data-ref="csumn"></b></div>
   <div class="bo-floats" data-ref="floats" aria-hidden="true"></div>
   <div class="bo-pban" data-ref="pban" aria-hidden="true"></div>
 </div>
@@ -3594,12 +3823,10 @@ display:flex;align-items:center;justify-content:center;gap:10px;cursor:pointer;t
     <div class="bo-row" style="justify-content:flex-end"><span class="bo-kp" data-ref="bkp"></span></div>
   </div>
 </div>
-<div class="bo-msg bo-hud" data-ref="msg">
-  <div class="bo-msg-text" data-ref="msgtext" aria-live="polite"></div>
-  <div class="bo-meter" data-ref="meter" hidden>
-    <div class="bo-meter-top" role="status"><b data-ref="mtitle"></b><span data-ref="mstate"></span></div>
-    <div class="bo-meter-bar" aria-hidden="true"><i class="bo-meter-zone" data-ref="mzone" hidden></i><i class="bo-meter-fill" data-ref="mfill"></i></div>
-  </div>
+<div class="bo-msg bo-hud" data-ref="msg" data-kind="idle">
+  <div class="bo-info-top"><b data-ref="ititle" aria-live="polite"></b><span data-ref="istate"></span></div>
+  <div class="bo-info-sub" data-ref="isub"></div>
+  <div class="bo-meter-bar" aria-hidden="true"><i class="bo-meter-zone" data-ref="mzone" hidden></i><i class="bo-meter-fill" data-ref="mfill"></i></div>
 </div>
 <div class="bo-dodgerow bo-hud">
   <button type="button" class="bo-dodge" data-ref="dodge" data-state="idle" aria-disabled="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 17c3-1 5-3.5 6.5-7M14 4l2.5 6.5L23 13"/><path d="M2 21h7"/></svg><span data-ref="dodgelabel">${esc(T.dodge)}</span></button>
@@ -3614,42 +3841,106 @@ display:flex;align-items:center;justify-content:center;gap:10px;cursor:pointer;t
     root.querySelectorAll('[data-ref]').forEach((el) => { ref[el.dataset.ref] = el; });
     ref.bossfx.appendChild(bossImg);
     ref.player.firstElementChild.appendChild(playerImg);
+    // Patch 8.1: Kopien zum Aufblitzen
+    let bflash = mkFlash(bossImg), pflash = mkFlash(playerImg);
+    ref.bossfx.appendChild(bflash); ref.playerfx.appendChild(pflash);
 
     const state = { bossHp: o.boss.hp ?? o.boss.maxHp, bossMax: o.boss.maxHp, playerHp: o.player.hp ?? o.player.maxHp, playerMax: o.player.maxHp, team: o.player.team || [] };
     const bossBar = root.querySelector('.bo-hp--boss'), playerBar = root.querySelector('.bo-hp--player');
 
+    // Patch 8.1: Texte und Balken nur anfassen, wenn sich etwas ändert. Jede Änderung an Text oder Breite lässt den
+    // Browser das Layout neu berechnen, im Kampf sonst in jedem Bild.
+    const txt = new WeakMap();
+    const setText = (el, t) => { t = String(t); if (txt.get(el) !== t) { txt.set(el, t); el.textContent = t; } };
+    const clamp01 = (v) => Math.max(0, Math.min(1, +v || 0));
+    const setScale = (el, r) => { const v = Math.round(clamp01(r) * 1000) / 1000; if (el._sx !== v) { el._sx = v; el.style.transform = `scaleX(${v})`; } };
+    const setAttr = (el, k, v) => { v = String(v); if (el.getAttribute(k) !== v) el.setAttribute(k, v); };
     function paintBar(bar, val, max, kpEl) {
       const r = max > 0 ? Math.max(0, Math.min(1, val / max)) : 0;
-      bar.querySelector('.bo-hp-fill').style.width = r * 100 + '%';
-      bar.querySelector('.bo-hp-trail').style.width = r * 100 + '%';
-      bar.dataset.level = hpLevel(r);
-      bar.setAttribute('aria-valuemax', String(Math.round(max)));
-      bar.setAttribute('aria-valuenow', String(Math.round(val)));
-      kpEl.textContent = `${fmt(val)} / ${fmt(max)} ${T.kp}`;
+      setScale(bar.querySelector('.bo-hp-fill'), r);
+      setScale(bar.querySelector('.bo-hp-trail'), r);
+      const lv = hpLevel(r); if (bar.dataset.level !== lv) bar.dataset.level = lv;
+      setAttr(bar, 'aria-valuemax', Math.round(max));
+      setAttr(bar, 'aria-valuenow', Math.round(val));
+      setText(kpEl, `${fmt(val)} / ${fmt(max)} ${T.kp}`);
     }
 
     // Größe und Position der Pokémon. Bilder werden nie größer als ihre Originalauflösung.
+    // Patch 8.1: Pixelart-Sprites werden in ganzen Schritten vergrößert, so groß es die Arena erlaubt: Jedes Sprite-Pixel
+    // wird zu einem Block aus n x n echten Displaypixeln (n ganzzahlig, bei 2- oder 3-facher Pixeldichte also auch halbe
+    // oder Drittel-Schritte in CSS-Pixeln). Mit image-rendering: pixelated bleibt jeder Block scharf.
+    function pixFit(img, maxW, maxH, dpr) {
+      const nw = img.naturalWidth || 1, nh = img.naturalHeight || 1;
+      const n = Math.max(1, Math.min(Math.round(CONFIG.pixelMax * dpr), Math.floor(Math.min(maxW / nw, maxH / nh) * dpr + 1e-6)));
+      return { w: (nw * n) / dpr, h: (nh * n) / dpr, n };
+    }
     function layout() {
       const stage = ref.stage, W = stage.clientWidth, Hh = stage.clientHeight;
       if (!W || !Hh) return;
+      // Patch 8.1: in einer flachen Arena (kleines Handy, Browser mit Leisten) wird das Namensbanner kleiner,
+      // damit Boss und eigenes Pokémon Platz haben
+      const short = Hh < 300;
+      if (root._short !== short) { root._short = short; root.classList.toggle('bo--short', short); }
       const s = Math.max(W / VW, Hh / VH), ox = (W - VW * s) / 2, oy = Hh - VH * s;
       const ax = ox + AX * s, ay = oy + AY * s, arx = ARX * s, ary = ARY * s;
       const dpr = global.devicePixelRatio || 1;
       const cap = (img) => (img.naturalWidth / dpr) * CONFIG.maxUpscale;
+      const snap = (v) => Math.round(v * dpr) / dpr;
+      const lt = `translate(${ox}px,${oy}px) scale(${s})`;
+      if (ref.lift.style.transform !== lt) { ref.lift.style.transform = lt; ref.liftfx.style.transform = lt; }
+      // das Namensbanner oben links soll kein Pokémon verdecken (mit 4 px Abstand)
+      const bn = ref.banner, bR = bn.offsetLeft + bn.offsetWidth + 4, bB = bn.offsetTop + bn.offsetHeight + 4;
+      flBanner = [bn.offsetLeft - 2, bn.offsetTop - 2, bR - 2, bB - 2];
 
       const feetY = ay - ary * 0.12;
-      const bx = Math.min(W - 8, ax + arx * 0.44);
-      const bSize = Math.max(48, Math.min(W * 0.58, feetY - 60, cap(bossImg), (W - bx) * 2 - 8));
-      Object.assign(ref.boss.style, { width: bSize + 'px', height: bSize + 'px', left: bx - bSize / 2 + 'px', top: feetY - bSize * 0.94 + 'px' });
-      Object.assign(ref.bshadow.style, { width: bSize * 0.72 + 'px', height: bSize * 0.17 + 'px', left: bx - bSize * 0.36 + 'px', top: feetY - bSize * 0.085 + 'px' });
+      let bx = Math.min(W - 8, ax + arx * 0.44), bw, bh;
+      if (isPix(bossImg)) {
+        // so groß, wie es passt: unter dem Banner oder rechts daneben, dann darf der Boss fast bis nach oben reichen
+        const nw = bossImg.naturalWidth || 1, nh = bossImg.naturalHeight || 1, x0 = bx;
+        const fit = (n) => {
+          const w = (nw * n) / dpr, h = (nh * n) / dpr, top = feetY - h, lo = w / 2 + 6, hi = W - w / 2 - 6;
+          if (top < 6 || lo > hi) return null;
+          const x = Math.max(lo, Math.min(x0, hi));
+          if (top >= bB) return { w, h, x };
+          const xr = Math.max(x, bR + w / 2);
+          return xr <= hi ? { w, h, x: xr } : null;
+        };
+        let f = null;
+        for (let n = pixFit(bossImg, W * CONFIG.bossBox[0], Hh * CONFIG.bossBox[1], dpr).n; n >= 1 && !f; n--) f = fit(n);
+        if (!f) { const w = nw / dpr; f = { w, h: nh / dpr, x: Math.max(w / 2 + 6, Math.min(x0, W - w / 2 - 6)) }; }
+        bw = f.w; bh = f.h; bx = f.x;
+      } else {
+        bw = bh = Math.max(48, Math.min(W * 0.58, feetY - 60, cap(bossImg), (W - bx) * 2 - 8));
+      }
+      const bl = snap(bx - bw / 2), bt = snap(feetY - bh * (isPix(bossImg) ? 1 : 0.94));
+      Object.assign(ref.boss.style, { width: bw + 'px', height: bh + 'px', left: bl + 'px', top: bt + 'px' });
+      Object.assign(ref.bshadow.style, { width: bw * 0.72 + 'px', height: Math.max(10, bw * 0.17) + 'px', left: bx - bw * 0.36 + 'px', top: feetY - Math.max(10, bw * 0.17) * 0.5 + 'px' });
+      Object.assign(ref.bhalo.style, { width: bw * 1.3 + 'px', height: bh * 1.15 + 'px', left: bx - bw * 0.65 + 'px', top: bt + bh * 0.5 - bh * 0.575 + 'px' });
+      // Patch 8.1: das Phasenbanner nie auf den Boss: oben, wenn darüber Platz ist, sonst unten in der Arena
+      const pbH = short ? 52 : 72, pbTop = bt - 6 - pbH >= 8 ? 12 : Math.max(feetY + 6, Hh - 8 - pbH);
+      if (ref.pban._top !== pbTop) { ref.pban._top = pbTop; ref.pban.style.top = pbTop + 'px'; }
 
-      const pSize = Math.max(40, Math.min(W * 0.36, Hh * 0.32, cap(playerImg)));
-      const px = Math.max(pSize * 0.5 + 6, ax - arx * 0.6);
-      const pFeet = Math.min(Hh - 4, ay + ary * 0.78);
-      Object.assign(ref.player.style, { width: pSize + 'px', height: pSize + 'px', left: px - pSize / 2 + 'px', top: pFeet - pSize * 0.95 + 'px' });
-      Object.assign(ref.pshadow.style, { width: pSize * 0.7 + 'px', height: pSize * 0.16 + 'px', left: px - pSize * 0.35 + 'px', top: pFeet - pSize * 0.08 + 'px' });
-      anchors.boss = { x: bx, y: feetY - bSize * 0.62, w: bSize, W }; // Patch 8: Schadenszahlen
-      anchors.player = { x: px, y: pFeet - pSize * 0.7, w: pSize, W };
+      // eigenes Pokémon (Patch 8.1: etwas höher, ganz sichtbar, mit hellem Schein dahinter, auch für dunkle Shinys;
+      // reicht es bis unter das Banner, steht es tiefer, und nur wenn auch das nicht reicht, wird es kleiner)
+      let pw, ph, px, pFeet;
+      const placeP = () => {
+        px = Math.max(pw * 0.5 + 8, ax - arx * 0.58);
+        pFeet = Math.min(Hh - 14, ay + ary * 0.5);
+        if (px - pw / 2 < bR && pFeet - ph < bB) pFeet = Math.min(Hh - 6, bB + ph);
+      };
+      if (isPix(playerImg)) {
+        // in der flachen Arena darf es anteilig etwas höher sein, sonst blieben große Sprites winzig
+        ({ w: pw, h: ph } = pixFit(playerImg, W * CONFIG.playerBox[0], Hh * (short ? 0.52 : CONFIG.playerBox[1]), dpr));
+        placeP();
+        if (px - pw / 2 < bR && pFeet - ph < bB) { ({ w: pw, h: ph } = pixFit(playerImg, W * CONFIG.playerBox[0], Math.max(1, Hh - 6 - bB), dpr)); placeP(); }
+      } else { pw = ph = Math.max(40, Math.min(W * 0.36, Hh * 0.32, cap(playerImg))); placeP(); }
+      const pl = snap(px - pw / 2), pt = snap(pFeet - ph * (isPix(playerImg) ? 1 : 0.95));
+      Object.assign(ref.player.style, { width: pw + 'px', height: ph + 'px', left: pl + 'px', top: pt + 'px' });
+      Object.assign(ref.pshadow.style, { width: pw * 0.7 + 'px', height: Math.max(9, pw * 0.16) + 'px', left: px - pw * 0.35 + 'px', top: pFeet - Math.max(9, pw * 0.16) * 0.5 + 'px' });
+      Object.assign(ref.phalo.style, { width: pw * 1.36 + 'px', height: ph * 1.2 + 'px', left: px - pw * 0.68 + 'px', top: pt + ph * 0.5 - ph * 0.6 + 'px' });
+      for (const [f, w, h] of [[bflash, bw, bh], [pflash, pw, ph]]) if (f) { f.style.width = w + 'px'; f.style.height = h + 'px'; }
+      anchors.boss = { x: bx, y: bt + bh * 0.28, w: bw, W, H: Hh, cx: bx, cy: bt + bh * 0.5 }; // Patch 8: Schadenszahlen
+      anchors.player = { x: px, y: pt + ph * 0.2, w: pw, W, H: Hh };
 
       applyCustomArt(W, Hh, dpr);
     }
@@ -3677,16 +3968,69 @@ display:flex;align-items:center;justify-content:center;gap:10px;cursor:pointer;t
       ref.stage.querySelector('.bo-scene').after(customImg);
     }
 
-    // Patch 8: Zustand der neuen Kampfanzeigen
+    // Patch 8: Zustand der neuen Kampfanzeigen (Patch 8.1: Animationen über die Web Animations API, nur transform
+    // und opacity, ohne erzwungene Neuberechnung des Layouts)
     const anchors = {};
-    let floatCount = 0, swapSeq = 0, meterKey = '', dodgeState = '', mateKey = '', pbanT = 0, quitT = 0, dodgeAt = 0;
+    let floatCount = 0, swapSeq = 0, dodgeState = '', mateKey = '', pbanT = 0, quitT = 0, dodgeAt = 0;
+    let bShake = null, pShake = null, pLunge = null, sShake = null, impactA = null, ambient = [];
+    // Patch 8.1: Plätze für Schadenszahlen als [Spalte, Höhenversatz] um den Ankerpunkt. Die ersten sind die
+    // leicht versetzten Spuren, die anderen weichen aus, wenn dort gerade eine Zahl steht.
+    const lanes = {
+      boss: { spots: [[0, 0], [-1, -12], [1, -6], [-2, -18], [2, -3], [0, 24], [-1, 16], [1, 20], [-2, 10], [2, 14], [0, -36], [-1, -42], [1, -32], [0, 46], [-1, 40], [1, 44]], lanes: 5, next: 0, last: null },
+      player: { spots: [[0, 0], [-1, -10], [1, -5], [0, 22], [-1, 16], [1, 18], [0, -30], [-1, -26], [1, -28]], lanes: 3, next: 0, last: null },
+      word: { spots: [[0, -30], [0, -52], [0, -74], [-1, -40], [1, -40], [-1, -62], [1, -62], [1, -12], [0, 0], [1, 12], [0, 24], [-1, 18]], lanes: 3, next: 0, last: null },
+    };
+    // Bahn einer Zahl (bo-float: 0,9 s, ease-out je Abschnitt) als Tabelle: Höhe, Deckkraft und Größe über die Zeit
+    const FLY = (() => {
+      const ease = (u) => { let lo = 0, hi = 1; for (let i = 0; i < 16; i++) { const t = (lo + hi) / 2; if (1.74 * t * t * (1 - t) + t * t * t < u) lo = t; else hi = t; } const t = (lo + hi) / 2; return 3 * t * t - 2 * t * t * t; };
+      const n = 46, y = [], o = [], s = [];
+      for (let i = 0; i < n; i++) {
+        const q = i / (n - 1);
+        if (q <= 0.15) { const e = ease(q / 0.15); y.push(-10 * e); o.push(e); s.push(0.8 + 0.28 * e); } else { const e = ease((q - 0.15) / 0.85); y.push(-10 - 52 * e); o.push(1 - e); s.push(1.08 - 0.08 * e); }
+      }
+      return { n, y, o, s, ms: 900 };
+    })();
+    const flAt = (k, tau) => { const f = Math.max(0, Math.min(1, tau / FLY.ms)) * (FLY.n - 1), i = Math.floor(f), j = Math.min(FLY.n - 1, i + 1); return FLY[k][i] + (FLY[k][j] - FLY[k][i]) * (f - i); };
+    const FL_FS = { crit: 24, big: 26, info: 14, good: 16 };
+    let flLive = [], csumBox = null, flBanner = null;
+    // Rechteck einer Zahl tau ms nach ihrem Start (null, solange sie kaum zu sehen ist)
+    function flRect(F, tau) {
+      if (tau < 0 || tau > FLY.ms || (tau > 120 && flAt('o', tau) < 0.18)) return null;
+      const sc = flAt('s', tau), hw = F.w * sc / 2 + 2, hh = F.h * sc / 2 + 2, cy = F.y + F.h / 2 + flAt('y', tau);
+      return [F.x - hw, cy - hh, F.x + hw, cy + hh];
+    }
+    const flHit = (a, b) => a[0] < b[2] && b[0] < a[2] && a[1] < b[3] && b[1] < a[3];
+    // trifft die neue Zahl N (Start now) eine sichtbare Zahl oder die Summe des Konterschadens?
+    function flClash(N, now, skip) {
+      for (let T = 0; T <= 640; T += 20) {
+        const r = flRect(N, T);
+        if (!r) continue;
+        if (T <= 360 && r[1] < 2) return true; // oben aus der Arena hinaus
+        if (flBanner && flHit(r, flBanner)) return true; // nicht über den Bossnamen
+        if (csumBox && flHit(r, csumBox)) return true;
+        for (const F of flLive) { if (F === skip) continue; const q = flRect(F, now + T - F.t); if (q && flHit(r, q)) return true; }
+      }
+      return false;
+    }
     const pillCache = new WeakMap();
-    const clamp01 = (v) => Math.max(0, Math.min(1, +v || 0));
     function pills(el, list) {
       const html = (list || []).map((p) => `<span class="bo-pill"${p.tone ? ` data-tone="${esc(p.tone)}"` : ''}>${esc(p.text)}</span>`).join('');
       if (pillCache.get(el) !== html) { pillCache.set(el, html); el.innerHTML = html; }
     }
-    function retrigger(el, cls) { el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); }
+    const calm = () => root.classList.contains('bo--calm') || !!(global.matchMedia && global.matchMedia('(prefers-reduced-motion: reduce)').matches);
+    const play = (el, kf, opt) => { if (!el || !el.animate) return null; try { return el.animate(kf, opt); } catch (e) { return null; } };
+    // Aufblitzen: die Kopie des Sprites in einer Farbe kurz einblenden und ausblenden
+    function flash(el, color, peak, ms) {
+      if (!el) return;
+      if (el._a) el._a.cancel();
+      if (el.dataset.c !== color) el.dataset.c = color;
+      el.style.visibility = 'visible';
+      const a = play(el, [{ opacity: peak }, { opacity: 0 }], { duration: ms, easing: 'ease-out' });
+      el._a = a;
+      if (!a) { el.style.visibility = 'hidden'; return; }
+      const done = () => { if (el._a === a) { el._a = null; el.style.visibility = 'hidden'; } };
+      a.onfinish = done; a.oncancel = done;
+    }
 
     const api = {
       root,
@@ -3699,7 +4043,7 @@ display:flex;align-items:center;justify-content:center;gap:10px;cursor:pointer;t
         // Patch 8: Einträge als Objekte { s, icon, label, hp } werden zu Knöpfen zum Wechseln (ab zwei Pokémon)
         const rich = state.team.length > 1 && state.team.every((x) => x && typeof x === 'object');
         const dots = rich ? '' : state.team.map((x) => `<span class="bo-dot" data-s="${esc(typeof x === 'object' && x ? x.s : x)}"></span>`).join('');
-        if (ref.team.innerHTML !== dots) ref.team.innerHTML = dots;
+        if (ref.team._dots !== dots) { ref.team._dots = dots; ref.team.innerHTML = dots; }
         if (!rich) { if (mateKey) { mateKey = ''; ref.mates.innerHTML = ''; } return; }
         const key = state.team.map((x) => x.key || x.icon || '').join('|');
         if (key !== mateKey) {
@@ -3710,98 +4054,180 @@ display:flex;align-items:center;justify-content:center;gap:10px;cursor:pointer;t
           const b = ref.mates.children[i]; if (!b) return;
           const r = clamp01(x.hp == null ? 1 : x.hp);
           if (b.dataset.s !== x.s) b.dataset.s = x.s;
-          b.disabled = x.s !== 'ok';
-          b.setAttribute('aria-label', x.label || '');
-          const hp = b.lastElementChild;
-          hp.dataset.level = hpLevel(r);
-          hp.firstElementChild.style.width = r * 100 + '%';
+          const off = x.s !== 'ok'; if (b.disabled !== off) b.disabled = off;
+          setAttr(b, 'aria-label', x.label || '');
+          const hp = b.lastElementChild, lv = hpLevel(r);
+          if (hp.dataset.level !== lv) hp.dataset.level = lv;
+          setScale(hp.firstElementChild, r);
         });
       },
-      setTimer(sec) { ref.timer.textContent = timeStr(sec); ref.timer.classList.toggle('is-low', sec <= 30); },
-      setMessage(text) { if (ref.msgtext.textContent !== text) ref.msgtext.textContent = text; },
-      setPotions(left, max) { ref.potions.textContent = `${left}/${max}`; root.querySelector('[data-act="potion"]').disabled = left <= 0; },
-      setXAttacks(left, max) { ref.xattacks.textContent = `${left}/${max}`; root.querySelector('[data-act="x"]').disabled = left <= 0; },
-      hit() { const el = ref.bossfx; el.classList.remove('bo-hitfx'); void el.offsetWidth; el.classList.add('bo-hitfx'); },
+      setTimer(sec) { setText(ref.timer, timeStr(sec)); const low = sec <= 30; if (ref.timer._low !== low) { ref.timer._low = low; ref.timer.classList.toggle('is-low', low); } },
+      // Patch 8.1: Meldung im Infobereich (Titel und eine Zeile darunter), siehe setInfo
+      setMessage(text, sub) { api.setInfo({ kind: 'idle', title: text, sub: sub || '' }); },
+      setPotions(left, max) { setText(ref.potions, `${left}/${max}`); },
+      setXAttacks(left, max) { setText(ref.xattacks, `${left}/${max}`); },
+      // Patch 8.1: Treffer am Boss: er blitzt auf und wackelt. crit (Konterfenster): golden, länger, stärker, mit Ring.
+      hit(crit) {
+        flash(bflash, crit ? 'gold' : 'white', crit ? 0.95 : 0.75, crit ? 240 : 140);
+        if (calm()) return;
+        if (bShake) bShake.cancel();
+        const a = crit ? 6 : 3;
+        bShake = play(ref.boss, [{ transform: 'translate(0,0)' }, { transform: `translate(${a}px,${crit ? -2 : 0}px)` }, { transform: `translate(${-a}px,${crit ? 1 : 0}px)` }, { transform: `translate(${a / 2}px,0)` }, { transform: 'translate(0,0)' }],
+          { duration: crit ? 260 : 170, easing: 'ease-out' });
+        if (crit && anchors.boss) {
+          const im = ref.impact;
+          im.style.left = anchors.boss.cx + 'px'; im.style.top = anchors.boss.cy + 'px';
+          if (impactA) impactA.cancel();
+          impactA = play(im, [{ opacity: 1, transform: 'scale(.55)' }, { opacity: 0, transform: 'scale(1.5)' }], { duration: 300, easing: 'ease-out' });
+        }
+      },
+      // Patch 8.1: das eigene Pokémon macht beim Angriff einen kurzen Satz nach vorn, zum Boss hin
+      attack(strong) {
+        if (calm()) return;
+        if (pLunge) pLunge.cancel();
+        const d = strong ? 16 : 9;
+        pLunge = play(ref.player, [{ transform: 'translate(0,0)' }, { transform: `translate(${d}px,${-Math.round(d * 0.55)}px)`, offset: 0.35 }, { transform: 'translate(0,0)' }],
+          { duration: strong ? 240 : 150, easing: 'ease-out' });
+      },
       // Patch 8: eigenes Pokémon wechseln. Name, Level und KP sofort, das Bild sobald es geladen ist.
       setPlayer(p) {
         const seq = ++swapSeq;
         state.playerHp = p.hp ?? p.maxHp; state.playerMax = p.maxHp;
         paintBar(playerBar, state.playerHp, state.playerMax, ref.pkp);
-        ref.plv.textContent = `${T.lv} ${p.level}`;
+        setText(ref.plv, `${T.lv} ${p.level}`);
         return loadPokemon(p.id).then((mon) => {
           if (seq !== swapSeq) return null;
           api.player = player = mon;
-          ref.pname.textContent = mon.name;
+          setText(ref.pname, mon.name);
           playerBar.setAttribute('aria-label', `${T.kp} ${mon.name}`);
           return loadArt(mon);
         }).then((img) => {
           if (!img || seq !== swapSeq) return;
-          ref.playerfx.replaceChildren(img);
+          if (pflash && pflash._a) pflash._a.cancel();
+          pflash = mkFlash(img);
+          ref.playerfx.replaceChildren(img, pflash);
           playerImg = img;
           layout();
-          retrigger(ref.playerfx, 'bo-swapin');
+          if (!calm()) play(ref.playerfx, [{ opacity: 0, transform: 'translateX(-24px)' }, { opacity: 1, transform: 'none' }], { duration: 450, easing: 'ease-out' });
         }).catch(() => {});
       },
-      hitPlayer() { retrigger(ref.playerfx, 'bo-hurtfx'); },
-      shake() { retrigger(root, 'bo-shake'); },
+      // Patch 8.1: Schaden am eigenen Pokémon: es blitzt rot auf und wackelt (bei Großangriffen stärker)
+      hitPlayer(big) {
+        flash(pflash, 'red', big ? 0.9 : 0.7, big ? 320 : 200);
+        if (calm()) return;
+        if (pShake) pShake.cancel();
+        const a = big ? 7 : 3;
+        pShake = play(ref.playerfx, [{ transform: 'translate(0,0)' }, { transform: `translate(${-a}px,0)` }, { transform: `translate(${a}px,0)` }, { transform: `translate(${-a / 2}px,0)` }, { transform: 'translate(0,0)' }],
+          { duration: big ? 320 : 200, easing: 'ease-out' });
+      },
+      shake() {
+        if (calm()) return;
+        if (sShake) sShake.cancel();
+        sShake = play(ref.stage, [{ transform: 'translate(0,0)' }, { transform: 'translate(-4px,2px)' }, { transform: 'translate(4px,-2px)' }, { transform: 'translate(-3px,1px)' }, { transform: 'translate(2px,-1px)' }, { transform: 'translate(0,0)' }],
+          { duration: 450, easing: 'ease-out' });
+      },
       setPhase(n, total) {
-        ref.phase.hidden = !(total > 1);
-        ref.phase.textContent = `${T.phase} ${n}/${total}`;
-        ref.phase.dataset.last = n >= total ? '1' : '';
+        const hide = !(total > 1); if (ref.phase.hidden !== hide) ref.phase.hidden = hide;
+        setText(ref.phase, `${T.phase} ${n}/${total}`);
+        const last = n >= total ? '1' : ''; if (ref.phase.dataset.last !== last) ref.phase.dataset.last = last;
       },
       setSpecial(r, ready) {
-        ref.spec.firstElementChild.style.width = clamp01(r) * 100 + '%';
-        ref.spec.classList.toggle('is-ready', !!ready);
-        ref.specic.classList.toggle('is-ready', !!ready);
+        setScale(ref.spec.firstElementChild, r);
+        const on = !!ready;
+        if (ref.spec._on !== on) { ref.spec._on = on; ref.spec.classList.toggle('is-ready', on); ref.specic.classList.toggle('is-ready', on); }
       },
       setPills(bossList, playerList) { pills(ref.bpills, bossList); pills(ref.ppills, playerList); },
-      // m: null (Meldungszeile zeigt Text) oder { kind: 'charge'|'counter'|'geo'|'combo', title, state, tone, p, zone: [von, bis] }
-      setMeter(m) {
-        const on = !!m;
-        if (ref.meter.hidden === on) { ref.meter.hidden = !on; ref.msgtext.hidden = on; }
-        if (!on) { meterKey = ''; return; }
-        const key = m.kind + '|' + m.title;
-        if (key !== meterKey) { meterKey = key; ref.mtitle.textContent = m.title; ref.meter.dataset.kind = m.kind; }
-        if (ref.mstate.textContent !== (m.state || '')) ref.mstate.textContent = m.state || '';
-        if ((ref.meter.dataset.tone || '') !== (m.tone || '')) ref.meter.dataset.tone = m.tone || '';
-        ref.mfill.style.width = clamp01(m.p) * 100 + '%';
-        if (m.zone) {
-          ref.mzone.hidden = false;
-          ref.mzone.style.left = clamp01(m.zone[0]) * 100 + '%';
-          ref.mzone.style.width = (clamp01(m.zone[1]) - clamp01(m.zone[0])) * 100 + '%';
-        } else ref.mzone.hidden = true;
+      // Patch 8.1: der Infobereich über dem Ausweichen-Button hat immer denselben Aufbau, damit nichts springt:
+      // Titel mit Status rechts, eine Zeile darunter, ein Balken.
+      // i: { kind: 'idle'|'charge'|'combo'|'counter'|'geo', title, state, sub, tone, p (0..1), zone: [von, bis] }
+      setInfo(i) {
+        const m = ref.msg, k = i.kind || 'idle', tone = i.tone || '';
+        if (m.dataset.kind !== k) m.dataset.kind = k;
+        if ((m.dataset.tone || '') !== tone) m.dataset.tone = tone;
+        setText(ref.ititle, i.title || '');
+        setText(ref.istate, i.state || '');
+        // lange Titel (Name, Attacke und Status) etwas kleiner, damit sie in die Zeile passen
+        const long = (i.title || '').length + (i.state ? i.state.length + 3 : 0) > 34 ? '1' : '';
+        if ((m.dataset.long || '') !== long) { if (long) m.dataset.long = long; else delete m.dataset.long; }
+        setText(ref.isub, i.sub || '');
+        setScale(ref.mfill, i.p || 0);
+        const z = i.zone ? clamp01(i.zone[0]) + '|' + clamp01(i.zone[1]) : '';
+        if (ref.mzone._z !== z) {
+          ref.mzone._z = z; ref.mzone.hidden = !z;
+          if (z) { ref.mzone.style.left = clamp01(i.zone[0]) * 100 + '%'; ref.mzone.style.width = (clamp01(i.zone[1]) - clamp01(i.zone[0])) * 100 + '%'; }
+        }
       },
       // st: 'idle' | 'wait' | 'now' | 'done' | 'early'
       setDodge(st, label) {
         if (st !== dodgeState) { dodgeState = st; ref.dodge.dataset.state = st; ref.dodge.setAttribute('aria-disabled', String(st === 'idle')); }
-        const txt = label || T.dodge;
-        if (ref.dodgelabel.textContent !== txt) ref.dodgelabel.textContent = txt;
+        setText(ref.dodgelabel, label || T.dodge);
       },
-      setCounter(on) { root.classList.toggle('bo-counter', !!on); },
+      setCounter(on) { on = !!on; if (root._ctr !== on) { root._ctr = on; root.classList.toggle('bo-counter', on); } },
+      // Patch 8.1: Summe des Konterschadens. state: 'on' (Konterfenster läuft), 'done' (eben vorbei), 'off'
+      counterSum(n, state) {
+        const el = ref.csum;
+        if (state === 'off') { if (el._on) { el._on = false; el.classList.remove('is-on'); csumBox = null; } return; }
+        setText(ref.csuml, state === 'done' ? T.counterDone : T.counter);
+        setText(ref.csumn, fmt(n));
+        // Platz der Summe (oben rechts), damit keine Schadenszahl darüber läuft; geschätzt statt gemessen
+        const W = (anchors.boss && anchors.boss.W) || 0, cw = Math.max(126, fmt(n).length * 22 * 0.64 + 26);
+        csumBox = W && !root._short ? [W - 12 - cw - 4, 10, W - 8, 66] : null;
+        if (!el._on) { el._on = true; el.classList.add('is-on'); }
+        if (n !== el._n) { el._n = n; if (!calm() && n > 0) play(ref.csumn, [{ transform: 'scale(1.16)' }, { transform: 'scale(1)' }], { duration: 160, easing: 'ease-out' }); }
+      },
+      // Patch 8.1: etwa 1 Sekunde, oben in der Arena, damit es den Boss nicht verdeckt
       phaseBanner(title, sub, ms) {
         ref.pban.innerHTML = `<div class="bo-pban-in"><b>${esc(title)}</b>${sub ? `<span>${esc(sub)}</span>` : ''}</div>`;
-        retrigger(ref.pban, 'is-on');
+        ref.pban.classList.remove('is-on');
         clearTimeout(pbanT);
-        pbanT = setTimeout(() => ref.pban.classList.remove('is-on'), ms || 2300);
+        global.requestAnimationFrame(() => ref.pban.classList.add('is-on'));
+        pbanT = setTimeout(() => ref.pban.classList.remove('is-on'), ms || 1200);
       },
-      // Schadenszahl oder kurzer Hinweis über dem Boss (who 'boss') oder dem eigenen Pokémon ('player')
-      float(text, who, tone) {
-        const a = anchors[who === 'player' ? 'player' : 'boss'];
-        if (!a || floatCount > 24) return;
+      // Schadenszahl oder kurzer Hinweis über dem Boss (who 'boss') oder dem eigenen Pokémon ('player').
+      // Patch 8.1: Zahlen erscheinen leicht versetzt und überlagern sich nicht. Jede neue Zahl nimmt den ersten Platz,
+      // an dem sie auf ihrer ganzen Bahn keine sichtbare Zahl berührt. Ist keiner frei, zählt der Wert zur jüngsten
+      // Zahl dazu (n: der Wert als Zahl), sonst entfällt nur die Anzeige (die KP-Leiste zeigt den Schaden trotzdem).
+      float(text, who, tone, n) {
+        const side = who === 'player' ? 'player' : 'boss', a = anchors[side];
+        if (!a || floatCount > 28) return;
+        const now = global.performance.now(), word = tone === 'info' || tone === 'good';
+        flLive = flLive.filter((F) => F.el.isConnected && now - F.t < FLY.ms);
+        const fs = FL_FS[tone] || 19, chars = String(text).length;
+        // Breite großzügig geschätzt (ohne Messen, damit nichts das Layout neu berechnen muss)
+        const w = word ? chars * fs * (0.74 + (tone === 'info' ? 0.08 : 0.06)) + 4 : chars * fs * 0.64 + 4, h = fs;
+        const L = lanes[word ? 'word' : side], col = Math.max(44, Math.min(62, a.w * 0.24), w + 6);
+        const pick = (x, y) => ({ x: Math.max(w / 2 + 2, Math.min(a.W - w / 2 - 2, x)), y, w, h, t: now });
+        let N = null;
+        for (let k = 0; k < L.spots.length && !N; k++) {
+          const i = k < L.lanes ? (L.next + k) % L.lanes : k, sp = L.spots[i];
+          const c = pick(a.x + sp[0] * col, a.y + sp[1]);
+          if (!flClash(c, now)) { N = c; if (i < L.lanes) L.next = i + 1; }
+        }
+        if (!N) {
+          const f = L.last && L.last.el;
+          if (!word && f && f.isConnected && n != null && f._n != null && now - f._t < 400 && (f.dataset.tone || '') === (tone || '')) {
+            const t2 = f._pre + fmt(f._n + n), F = L.last, w2 = t2.length * fs * 0.64 + 4;
+            if (w2 <= F.w || !flClash(Object.assign({}, F, { w: w2 }), F.t, F)) { f._n += n; f.textContent = t2; F.w = Math.max(F.w, w2); }
+          }
+          return;
+        }
         const f = document.createElement('span');
         f.className = 'bo-float';
         if (tone) f.dataset.tone = tone;
         f.textContent = text;
-        const word = tone === 'info' || tone === 'good', half = word ? 8 + text.length * 5.5 : 30;
-        f.style.left = Math.max(half, Math.min(a.W - half, a.x + (word ? 0 : (Math.random() - 0.5) * a.w * 0.45))) + 'px';
-        f.style.top = (a.y + (Math.random() - 0.5) * a.w * 0.12) + 'px';
+        f.style.left = N.x + 'px';
+        f.style.top = N.y + 'px';
+        f._n = n; f._t = now; f._pre = /^[+-]/.test(text) ? text[0] : '';
+        N.el = f; flLive.push(N); L.last = N;
         ref.floats.appendChild(f); floatCount++;
-        setTimeout(() => { f.remove(); floatCount--; }, 960);
+        setTimeout(() => { f.remove(); floatCount--; }, 920);
       },
       playIntro() { return playIntro(ctx); },
       skipIntro() { if (ctx.intro) ctx.intro.end(false); },
       relayout: layout,
-      destroy() { ro.disconnect(); clearTimeout(pbanT); clearTimeout(quitT); if (ctx.intro) ctx.intro.end(true); root.remove(); }
+      // Patch 8.1: ruhige Darstellung an oder aus (die Szene hält an, die Kampfwirkung bleibt)
+      setCalm(on) { root.classList.toggle('bo--calm', !!on); ambient.forEach((a) => (on ? a.pause() : a.play())); },
+      destroy() { ro.disconnect(); clearTimeout(pbanT); clearTimeout(quitT); ambient.forEach((a) => a.cancel()); if (ctx.intro) ctx.intro.end(true); root.remove(); }
     };
 
     const ctx = { root, ref, api, opts: o, intro: null };
@@ -3843,11 +4269,21 @@ display:flex;align-items:center;justify-content:center;gap:10px;cursor:pointer;t
     ref.dodge.addEventListener('contextmenu', (e) => e.preventDefault());
     ref.stage.addEventListener('pointerdown', (e) => { if (!ctx.intro && o.onStageTap) o.onStageTap(e); });
     ref.stage.addEventListener('keydown', (e) => { if ((e.key === 'Enter' || e.key === ' ') && o.onStageTap) { e.preventDefault(); o.onStageTap(e); } });
-    ref.bossfx.addEventListener('animationend', (e) => { if (e.animationName === 'bo-hit') ref.bossfx.classList.remove('bo-hitfx'); if (e.animationName === 'bo-reveal') ref.bossfx.classList.remove('bo-reveal'); });
 
+    // Patch 8.1: bewegte Szenenteile und Partikel als eigene Ebenen, bewegt über Web Animations (ruhige Darstellung:
+    // die Szene steht still, die Kampfwirkung bleibt)
+    if (CONFIG.lift) {
+      liftAnimations(ref.stage.querySelector('.bo-scene'), ref.lift);
+      liftAnimations(ref.stage.querySelector('.bo-fx'), ref.liftfx);
+      if (o.calm) root.classList.add('bo--calm');
+      const reduce = global.matchMedia && global.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      if (!o.still && !o.calm && !reduce) ambient = startAmbient([ref.lift, ref.liftfx]);
+    }
     const ro = new ResizeObserver(layout);
     ro.observe(ref.stage);
     layout();
+    // Patch 8.1: das Namensbanner wird mit der Webschrift breiter oder schmaler, danach Positionen neu berechnen
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { if (root.isConnected) layout(); });
 
     if (o.intro) {
       await new Promise((r) => requestAnimationFrame(r));
@@ -3898,7 +4334,9 @@ display:flex;align-items:center;justify-content:center;gap:10px;cursor:pointer;t
       root.appendChild(ov);
       small.style.visibility = 'hidden';
       huds.forEach((h) => h.classList.add('bo-hud-wait'));
-      ref.bossfx.classList.add('bo-silhouette');
+      // Patch 8.1: die Silhouette ist die schwarze Kopie des Sprites über dem Boss, die Enthüllung blendet sie weiß aus
+      const sil = ref.bossfx.querySelector('.bo-flash');
+      if (sil) { if (sil._a) sil._a.cancel(); sil.dataset.c = 'sil'; sil.style.visibility = 'visible'; sil.style.opacity = '1'; }
 
       const D = CONFIG.introMs, anims = [];
       const go = (el, kf, extra) => { const a = el.animate(kf, Object.assign({ duration: D, fill: 'both' }, extra)); anims.push(a); return a; };
@@ -3919,9 +4357,8 @@ display:flex;align-items:center;justify-content:center;gap:10px;cursor:pointer;t
       huds.forEach((h, i) => go(h, [{ opacity: 0, transform: 'translateY(10px)' }, { opacity: 0, transform: 'translateY(10px)', offset: 0.74 + i * 0.03 }, { opacity: 1, transform: 'none', offset: Math.min(0.98, 0.88 + i * 0.03) }, { opacity: 1, transform: 'none' }]));
 
       const revealT = setTimeout(() => {
-        ref.bossfx.classList.remove('bo-silhouette');
-        ref.bossfx.classList.add('bo-reveal');
-        root.classList.add('bo-shake');
+        if (sil) { sil.dataset.c = 'white'; sil.style.opacity = '0'; anims.push(sil.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 800, easing: 'ease-out' })); }
+        anims.push(ref.stage.animate([{ transform: 'translate(0,0)' }, { transform: 'translate(-4px,2px)' }, { transform: 'translate(4px,-2px)' }, { transform: 'translate(-3px,1px)' }, { transform: 'translate(2px,-1px)' }, { transform: 'translate(0,0)' }], { duration: 450, easing: 'ease-out' }));
       }, D * 0.34);
 
       // silent = true: Intro wird abgebrochen (z. B. Kampf beendet), onIntroEnd wird dann nicht ausgelöst
@@ -3934,8 +4371,7 @@ display:flex;align-items:center;justify-content:center;gap:10px;cursor:pointer;t
         ov.remove();
         small.style.visibility = '';
         huds.forEach((h) => h.classList.remove('bo-hud-wait'));
-        ref.bossfx.classList.remove('bo-silhouette');
-        root.classList.remove('bo-shake');
+        if (sil) { sil.style.opacity = ''; sil.style.visibility = 'hidden'; }
         ctx.intro = null;
         if (!silent && opts.onIntroEnd) opts.onIntroEnd();
         resolve();
@@ -4234,8 +4670,37 @@ const Music = (function () {
 /* Pokémon Idle-Trainer: page logic. Uses the core rules (BALANCE, GYMS, TRAINERS, ctx, addXP, ...) and DATA/TABLES. */
 (function () {
   // ---------- version and patch notes ----------
-  const GAME_VERSION = '1.8.0';
+  const GAME_VERSION = '1.8.1';
   const PATCH_NOTES = [
+    {
+      v: '1.8.1', date: '15.10.2026', title: 'Patch 8.1: Kampfgefühl und Feinschliff',
+      parts: [
+        ['Dein Spielstand', [
+          'Alles bleibt erhalten: erreichte Level, gesammelte EP, Orden, Bossfortschritt, Items und Boosts.',
+        ]],
+        ['Einzeltraining: mehr EP pro Tipp', [
+          '<b>Fehler behoben:</b> Seit Patch 7.0 gab es deutlich weniger EP pro Tipp, weil Wiederholungssiege gegen Arenaleiter nicht mehr zählten. Das war nicht gewollt. Jetzt zählt wieder jeder Sieg, wie vor Patch 7.0.',
+          '<b>EP pro Tipp wachsen mit:</b> Mit jedem Level steigen die EP pro Tipp gleichmäßig, bis sie bei Lv. 600 den Höchstwert (Cap) von 1.000 EP erreichen, Boosts kommen noch dazu. Orden und Siege geben einen höheren Startwert. EP pro Tipp und Cap stehen im Einzeltraining.',
+          '<b>Neue EP-Kurve:</b> Bei 3 Tipps pro Sekunde ohne Boosts dauert ein Level um Lv. 100 etwa 1 Minute (mit vielen Orden weniger), bis Lv. 600 werden es 3 Minuten, bis Lv. 1000 langsam 5 Minuten. Die ersten Level gehen schneller. Von Lv. 5 bis 1000 sind es etwa 42 bis 45 Stunden reines Tippen, mit Boosts, Arena- und Boss-EP deutlich weniger.',
+          '<b>Deine EP bleiben:</b> Die gesammelten EP zum nächsten Level bleiben genau erhalten. Weil ein Level jetzt mehr EP braucht, ist der Balken anteilig kürzer. Ab dem mittleren Levelbereich bist du durch die höheren EP pro Tipp trotzdem deutlich schneller beim nächsten Level als in Version 1.8.0, zum Beispiel ohne Orden auf Lv. 300 in 2 statt fast 9 Minuten. Niedrige Level dauern dagegen etwas länger als vorher, mit vielen Orden bis etwa Lv. 370. Auch dann geht ein Level um Lv. 100 in unter einer Minute.',
+        ]],
+        ['Bosskampf: Pixelart und Trefferwirkung', [
+          '<b>Pixelart-Pokémon:</b> Boss und eigenes Pokémon erscheinen wieder als animierte Pixelart, in ganzen Schritten vergrößert (zum Beispiel 2- oder 3-fach) und scharf, ohne Weichzeichnen.',
+          '<b>Treffer spürbar:</b> Bei jedem Treffer blitzt der Boss auf und wackelt, im Konterfenster golden und stärker. Dein Pokémon springt beim Angriff nach vorn und blitzt rot auf, wenn es getroffen wird.',
+          '<b>Schadenszahlen:</b> Sie erscheinen leicht versetzt und überlagern sich nicht mehr. Im Konterfenster zählt die Summe deines Konterschadens mit, oben rechts in der Arena und im Infobereich, danach steht dort kurz das Ergebnis.',
+          '<b>Ruhiger Bildschirm:</b> Der Infobereich über dem Ausweichen-Button hat immer dieselbe Höhe und denselben Aufbau, Hinweise stehen in bis zu zwei Zeilen vollständig da. Das Phasenbanner steht nur etwa 1 Sekunde in der Arena und verdeckt den Boss nicht. Dein Pokémon steht etwas höher und hat einen hellen Schein, so sind auch dunkle Shinys gut zu sehen.',
+          '<b>Kleine Handys:</b> Ist die Arena flach, wird das Bossbanner kleiner und Boss und Pokémon stehen so, dass nichts verdeckt wird. Die Konter-Summe steht dann im Infobereich, die Knöpfe zeigen die Anzahl unter dem Namen.',
+          '<b>Flüssig:</b> Alle Kampfanimationen laufen nur noch über Verschieben und Ein- und Ausblenden. Das übernimmt die Grafikkarte, so bleibt der Kampf auch auf dem Handy flüssig.',
+        ]],
+        ['Bossstärke', [
+          '<b>Normale Angriffe treffen spürbar:</b> Ein normaler Treffer kostet mindestens 3,5 % der KP, ein Großangriff mindestens 35 %, auch mit Typvorteil. Liegt dein Pokémon über dem Bosslevel, wird es weniger. Wer nicht ausweicht, braucht damit fast immer mindestens eine Heilung.',
+        ]],
+        ['Behoben', [
+          '<b>Willkommen zurück:</b> Nach einem Bosskampf erschien manchmal „Willkommen zurück“, obwohl du im Spiel warst. Als Abwesenheit zählt jetzt nur noch Zeit, in der die App wirklich im Hintergrund war. Die Zeit im Kampf gehört nie dazu, sie zählt als Spielzeit, und während eines Bosskampfs erscheint das Fenster nicht.',
+          '<b>Kein leerer Ladebildschirm:</b> Die Bilder der Bosse und deines Teams werden schon in der Bossliste geladen, der Kampf beginnt sofort.',
+        ]],
+      ],
+    },
     {
       v: '1.8.0', date: '15.10.2026', title: 'Patch 8.0: Bosskämpfe im Souls-like-Stil',
       parts: [
@@ -5279,6 +5744,7 @@ const Music = (function () {
   }
   function refresh(force) {
     if (!S) return;
+    if (BT && BT.kind === 'boss') return; // Patch 8.1: the main game is hidden during a boss fight (renderAll after it)
     const c = ctx(W, S);
     const cps = cpsNow(W, S);
     $('#coins').textContent = fInt(S.coins);
@@ -6037,6 +6503,7 @@ const Music = (function () {
     Music.mode('field');
     const box = $('#battle');
     if (BT && BT.ov) BT.ov.destroy();
+    $('#app').classList.remove('behind');
     box.hidden = true; box.innerHTML = ''; box.classList.remove('bossmode');
     BT = null;
     if (!silent) { actionKey = ''; renderAll(); }
@@ -6191,6 +6658,7 @@ const Music = (function () {
       </div>
       <div class="bar" id="s-bar" role="progressbar" aria-label="EP bis zum nächsten Level im Einzeltraining"><i id="s-fill"></i></div>
       <div class="xprow"><span id="s-xp"></span><span id="s-tap"></span></div>
+      <div class="capline" id="s-cap"></div>
       <div class="goal" id="s-goal"></div>
       <div class="boosts" id="s-boosts"></div>
       <div class="btnrow"><button class="btn small" id="s-switch" type="button">Pokémon wechseln</button></div>
@@ -6211,7 +6679,12 @@ const Music = (function () {
     $('#s-fill').style.width = (L >= max ? 100 : clamp(xp / need, 0, 1) * 100).toFixed(1) + '%';
     $('#s-xp').innerHTML = L >= max ? '<b>Maximallevel erreicht</b>' : `<b>${fRate(xp)}</b> / ${fRate(need)} EP`;
     const ko = isKO(S, id);
-    $('#s-tap').textContent = ko ? 'Kampfunfähig' : '+' + fRate(soloTapEp(S)) + ' EP pro Tipp';
+    $('#s-tap').textContent = ko ? 'Kampfunfähig' : '+' + fRate(soloTapEp(S, L)) + ' EP pro Tipp';
+    // Patch 8.1: der Cap der EP pro Tipp (ohne Boost) und ab welchem Level er erreicht ist
+    const SB = BALANCE.solo, capped = soloTapRaw(S, L) >= SB.tapCap, boosted = S.boost && S.boost.tap > 0;
+    const capTxt = L >= max ? '' : capped ? `Cap erreicht: <b>${fInt(SB.tapCap)}</b> EP pro Tipp${boosted ? `, mit Tipp-Boost ×${BALANCE.boosts.tap.mult}` : ''}`
+      : `Steigt mit dem Level bis zum Cap von <b>${fInt(SB.tapCap)}</b> EP pro Tipp ab Lv. ${SB.tapCapLevel}${boosted ? `, jetzt mit Tipp-Boost ×${BALANCE.boosts.tap.mult}` : ''}`;
+    const capEl = $('#s-cap'); if (capEl && capEl._t !== capTxt) { capEl._t = capTxt; capEl.innerHTML = capTxt; }
     $('#s-goal').innerHTML = ko ? `<span>Kampfunfähig: kein Training, Boosts warten. <button class="linkbtn" type="button" data-heal="${id}">Heilen</button></span>` : soloGoal(id, L);
     const hb = $('#s-goal [data-heal]'); if (hb) hb.onclick = () => openHeal(id);
     renderBoosts();
@@ -6287,7 +6760,7 @@ const Music = (function () {
     if (now - soloLast < 55) return;
     soloLast = now;
     trackTap();
-    const ep = soloTapEp(S);
+    const ep = soloTapEp(S, soloLevel(S, S.solo.sel));
     const atMax = soloLevel(S, S.solo.sel) >= BALANCE.solo.maxLevel;
     const ev = soloTap(W, S);
     const st = $('#solo-stage');
@@ -6309,6 +6782,7 @@ const Music = (function () {
     if (arenaView === 'badges') { box.innerHTML = badgesHTML(); return; }
     if (arenaView === 'bosses') {
       box.innerHTML = bossesHTML();
+      preloadBossFight(BOSSES.map((b, bi) => bi).filter(bi => bossUnlocked(W, S, bi)), activeTeam(bossEligible(S, 0)));
       $$('[data-boss]', box).forEach(bt => bt.onclick = () => openPreBoss(+bt.dataset.boss));
       $$('[data-bngs]', box).forEach(bt => bt.onclick = () => { if (bngSelect(S, bngTier(S) + +bt.dataset.bngs)) { markDirty(); saveLocal(); renderArenaBody(); } });
       return;
@@ -6706,6 +7180,7 @@ const Music = (function () {
     const draw = () => {
       if (!el.isConnected) return;
       const t = bngTier(S), min = bossMinLevel(t);
+      preloadBossFight([bi], team);
       $('#bb-ng-rec', el).innerHTML = recText();
       $('#bb-tabs', el).innerHTML = [0, 1, 2].map(i => {
         const n = (i === S.bossTeamIdx ? team : S.bossTeams[i].filter(id => elig.includes(id))).length;
@@ -6817,9 +7292,8 @@ const Music = (function () {
   }
   // ---------- boss fight (Patch 8): the boss overlay from the design (boss-overlay.js) ----------
   // The overlay only draws and reports input. The fight runs in the rules (bossFight, bfStep, bfTap, bfDodge, ...).
-  const ARTWORK = SPR + 'other/official-artwork/';
-  // A type emblem as a picture, for when no artwork loads (offline, or a view that blocks outside pictures)
-  // flip: the overlay shows the own Pokémon mirrored, so its number is written mirrored and reads right
+  // Patch 8.1: the Pokémon are animated pixel sprites again, the boss from the front, the own Pokémon from behind.
+  // A type emblem as a picture, for when no sprite loads (offline, or a view that blocks outside pictures)
   function artEmblem(id, flip) {
     const sp = W.P[id - 1], a = TYPE_COL[sp.types[0]], b = TYPE_COL[sp.types[1] != null ? sp.types[1] : sp.types[0]];
     const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="475" height="475" viewBox="0 0 100 100"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${a}"/><stop offset="1" stop-color="${b}"/></linearGradient></defs><polygon points="50,7 87,28.5 87,71.5 50,93 13,71.5 13,28.5" fill="url(#g)" stroke="#ffffff" stroke-opacity=".55" stroke-width="2.5"/><text x="50" y="58.5" text-anchor="middle" font-family="Arial, sans-serif" font-weight="700" font-size="21" fill="#ffffff"${flip ? ' transform="matrix(-1 0 0 1 100 0)"' : ''}>#${pad3(id)}</text></svg>`;
@@ -6827,14 +7301,29 @@ const Music = (function () {
   }
   // Names and types for the overlay from the game's own PokéAPI data, so the fight needs no request to the PokéAPI.
   // key: the Pokédex number of the boss, or 'p' + number for the own Pokémon ('ps' + number when it is a shiny).
+  // Patch 8.1: animated sprite first (Schwarz/Weiß up to #649, the Showdown set after), then the still sprite, then the emblem.
   function overlayMon(key) {
     const k = /^(p?)(s?)(\d+)$/.exec(String(key)); if (!k) return null;
     const id = +k[3], sp = W.P[id - 1]; if (!sp) return null;
-    const sh = k[2] ? 'shiny/' : '';
+    const back = !!k[1], sh = !!k[2];
     return {
-      id, name: sp.name, types: sp.types.map(t => W.TI[t]), typeNames: sp.types.map(t => W.T[t]),
-      art: spritesOK ? [ARTWORK + sh + id + '.png', SPR + 'other/home/' + sh + id + '.png'] : [], fallback: artEmblem(id, !!k[1]),
+      id, name: sp.name, types: sp.types.map(t => W.TI[t]), typeNames: sp.types.map(t => W.T[t]), pixel: true,
+      art: spritesOK ? (back ? [sprUrl(id, 'back', sh), sprUrl(id, 'backpng', sh)] : [sprUrl(id, 'anim', sh), sprUrl(id, 'png', sh)]) : [],
+      fallback: artEmblem(id, false),
     };
+  }
+  // Patch 8.1: the pictures of a boss fight load already in the boss list and the pre-fight sheet (the bosses from the
+  // front, the team from behind, the small pictures of the team buttons), so the fight starts without a loading screen.
+  // They stay in memory for the visit.
+  const preImgs = new Map();
+  function preloadImg(url) {
+    if (!url || preImgs.has(url)) return;
+    const im = new Image(); im.decoding = 'async'; im.src = url; preImgs.set(url, im);
+  }
+  function preloadBossFight(bis, team) {
+    if (!spritesOK) return;
+    for (const bi of bis) preloadImg(sprUrl(BOSSES[bi].mon, 'anim', false));
+    for (const id of team || []) { const sh = !!S.shiny[id]; preloadImg(sprUrl(id, 'back', sh)); preloadImg(sprUrl(id, 'png', sh)); }
   }
   const monKey = id => 'p' + (S.shiny[id] ? 's' : '') + id;
   let overlayReady = false;
@@ -6843,6 +7332,7 @@ const Music = (function () {
     if (typeof BossOverlay === 'undefined') return false;
     BossOverlay.CONFIG.local = overlayMon;
     BossOverlay.CONFIG.introMs = 3600; // a little longer than designed, so the signature can be read
+    BossOverlay.CONFIG.artTimeout = 4000; // Patch 8.1: the sprites are small; on a slow line the still sprite or the emblem comes sooner
     overlayReady = true;
     return true;
   }
@@ -6894,13 +7384,16 @@ const Music = (function () {
     const name = W.P[b.mon - 1].name;
     return n === 2 ? `${name} wird aggressiver und setzt jetzt auch ${moveName(b, 1)} ein.` : `${name} greift noch schneller an. Neu: ${moveName(b, 2)}.`;
   }
+  // Patch 8.1: one short line for the phase banner
+  const phaseShort = (b, n) => (n === 2 ? `Schneller, neu: ${moveName(b, 1)}` : `Noch schneller, neu: ${moveName(b, 2)}`);
   function beginBoss(bi, team) {
     if (!initOverlay()) { toast('Der Bosskampf konnte nicht geladen werden. Lade die Seite neu und versuch es noch einmal.'); return; }
     const b = BOSSES[bi], sp = W.P[b.mon - 1], B = BALANCE.bosses;
     const G = bossSetup(W, S, bi, team, bngTier(S));
     const F = bossFight(G, S.inv);
-    const my = BT = { kind: 'boss', bi, G, F, b, sp, over: false, paused: false, intro: true, started: false, ov: null, lastTap: 0, msg: '', icons: {}, n: {} };
+    const my = BT = { kind: 'boss', bi, G, F, b, sp, over: false, paused: false, intro: true, started: false, ov: null, lastTap: 0, msg: '', msgSub: '', icons: {}, n: {}, csum: 0, inCtr: false, csumAt: -9 };
     Music.mode('boss');
+    $('#app').classList.add('behind'); // Patch 8.1: the main game is hidden behind the fight, it needs no drawing then
     const box = $('#battle');
     box.classList.add('bossmode'); box.innerHTML = ''; box.hidden = false;
     box.style.setProperty('--ta', TYPE_COL[G.members[0].sp.types[0]]);
@@ -6909,7 +7402,7 @@ const Music = (function () {
       boss: { id: b.mon, level: G.L, hp: F.hp, maxHp: G.hpMax, ticks: B.phaseAt.slice(0, G.phases - 1) },
       player: { id: monKey(m.id), level: m.L, hp: F.mhp[0], maxHp: m.maxHp, team: [] },
       timer: B.timeLimit, potions: [F.potions, F.potionMax], xAttacks: [F.xatks, B.xatkPerFight],
-      intro: !calm,
+      intro: !calm, calm,
       introNote: sig ? { title: 'Signatur: ' + sig.n, text: sig.d } : null,
       onIntroEnd: () => { if (BT === my) startBossFight(); },
       onStageTap: e => tapBoss(e),
@@ -6936,12 +7429,13 @@ const Music = (function () {
     if (!BT || BT.kind !== 'boss' || BT.started) return;
     BT.started = true; BT.intro = false;
     const sig = sigText(BT.bi);
-    bossMsg(sig && sig.h ? `${sig.n}: ${sig.h}` : `${BT.sp.name} stellt sich dir in den Weg!`);
+    if (sig && sig.h) bossMsg('Signatur: ' + sig.n, sig.h); else bossMsg(`${BT.sp.name} stellt sich dir in den Weg!`);
   }
   // The latest message stays for a few seconds, then the line reminds of the signature again.
-  function bossMsg(t) { if (BT) { BT.msg = t; BT.msgAt = BT.F.t; } }
-  // a number or a short word over the boss or the own Pokémon
-  function bfl(text, who, tone) { if (BT && BT.ov && !(reduceMotion() && tone == null)) BT.ov.float(text, who, tone); }
+  // Patch 8.1: a message is a short title and one line below it (the info area keeps its layout).
+  function bossMsg(t, sub) { if (BT) { BT.msg = t; BT.msgSub = sub || ''; BT.msgAt = BT.F.t; } }
+  // a number or a short word over the boss or the own Pokémon (n: the number, so the overlay can add up numbers)
+  function bfl(text, who, tone, n) { if (BT && BT.ov && !(reduceMotion() && tone == null)) BT.ov.float(text, who, tone, n); }
   function tapBoss(e) {
     if (!BT || BT.kind !== 'boss' || BT.over || BT.paused || BT.intro) return;
     const F = BT.F;
@@ -6950,7 +7444,9 @@ const Music = (function () {
     if (now - BT.lastTap < 55) return;
     BT.lastTap = now;
     S.stats.taps++; trackTap();
+    const n0 = F.taps;
     bfTap(F, () => rnd(0.9, 1.1));
+    if (F.taps > n0 && BT.ov) BT.ov.attack(F.taps % K.specialEvery === 0); // Patch 8.1: the own Pokémon lunges forward
     if (e && e.clientX != null && BT.fl && !reduceMotion()) { const r = BT.fl.getBoundingClientRect(); burst(e.clientX - r.left, e.clientY - r.top, 3, BT.fl); }
     vibe(5);
     bossEvents(); bossUI();
@@ -6975,6 +7471,13 @@ const Music = (function () {
     while (left > 1e-6 && !BT.F.over) { const h = Math.min(0.05, left); bfStep(BT.F, h, () => rnd(0.92, 1.08)); left -= h; }
     bossEvents(); bossUI();
   }
+  // Patch 8.1: the counter window is over; its total stays in the message line for a moment (on a small screen the
+  // arena has no room for the sum)
+  function ctrDone(F) {
+    if (!BT.inCtr) return;
+    BT.inCtr = false; BT.csumAt = F.t;
+    if (BT.csum > 0) bossMsg('Konterfenster vorbei', `Konterschaden gesamt: ${fInt(BT.csum)}`);
+  }
   function bossEvents() {
     if (!BT || BT.kind !== 'boss') return;
     const F = BT.F, ov = BT.ov, name = BT.sp.name, B = BALANCE.bosses, b = BT.b, n = BT.n;
@@ -6984,48 +7487,57 @@ const Music = (function () {
       switch (e.e) {
         case 'bossHit':
           if (e.immune) { bfl('Immun', 'boss', 'info'); break; }
-          bfl(fInt(e.d), 'boss', e.crit || e.kind === 'special' ? 'crit' : null);
-          if (ov && e.kind !== 'auto') ov.hit();
+          // whole numbers, so the counter sum is exactly the sum of the numbers shown
+          bfl(fInt(e.d), 'boss', e.crit || e.kind === 'special' ? 'crit' : null, Math.floor(e.d));
+          if (e.crit) BT.csum += Math.floor(e.d);
+          // Patch 8.1: every hit flashes and shakes the boss (gold and stronger in a counter window); the own
+          // Pokémon lunges for its own attacks too (the taps already did in tapBoss)
+          if (ov) { ov.hit(!!e.crit); if (e.kind === 'auto') ov.attack(false); }
           if (e.kind === 'special') vibe(20);
           break;
-        case 'blocked': bfl('Geblockt', 'boss', 'info'); if (once('blocked')) bossMsg(`Barriere: ${name} blockt jeden ${ORD[B.sig.barriere.every] || ''} Treffer, außer im Konterfenster.`); break;
-        case 'reflect': bfl('Abgeprallt', 'player', 'info'); n.reflect = (n.reflect || 0) + 1; bossMsg('Lichtschild! Deine Spezialattacke prallt ab. Warte, bis der Schild offen ist.'); break;
+        case 'blocked': bfl('Geblockt', 'boss', 'info'); if (ov && e.kind === 'auto') ov.attack(false); if (once('blocked')) bossMsg('Barriere!', `${name} blockt jeden ${ORD[B.sig.barriere.every] || ''} Treffer, außer im Konterfenster.`); break;
+        case 'reflect': bfl('Abgeprallt', 'player', 'info'); n.reflect = (n.reflect || 0) + 1; bossMsg('Lichtschild!', 'Deine Spezialattacke prallt ab. Warte, bis der Schild offen ist.'); break;
         case 'meHit':
+          // Patch 8.1: every damage to the own Pokémon makes it flash red
           if (e.kind === 'big') {
-            bfl('-' + fInt(e.d), 'player', 'big');
-            if (ov) { ov.hitPlayer(); if (!reduceMotion()) ov.shake(); }
-            vibe(60); bossMsg(`${name} trifft mit ${moveName(b, e.k)}!`);
+            bfl('-' + fInt(e.d), 'player', 'big', Math.floor(e.d));
+            if (ov) { ov.hitPlayer(true); ov.shake(); }
+            vibe(60); bossMsg(`${name} trifft mit ${moveName(b, e.k)}!`, 'Drück Ausweichen, wenn der Balken im grünen Bereich ist.');
           } else {
-            bfl(fInt(e.d), 'player', 'hurt');
-            if (ov && e.kind === 'hit') ov.hitPlayer();
-            if (e.kind === 'shock') { n.shock = (n.shock || 0) + 1; bossMsg(`Teravolt! Solange ${name} auflädt, schadet dir jeder Tipp.`); }
+            bfl('-' + fInt(e.d), 'player', 'hurt', Math.floor(e.d));
+            if (ov) ov.hitPlayer(false);
+            if (e.kind === 'shock') { n.shock = (n.shock || 0) + 1; bossMsg('Teravolt!', `Solange ${name} auflädt, schadet dir jeder Tipp.`); }
           }
           break;
         case 'charge': vibe(15); break;
         case 'window': vibe(25); break;
-        case 'early': n.early = (n.early || 0) + 1; bossMsg('Zu früh gedrückt! Warte, bis der Balken den grünen Bereich erreicht.'); break;
+        case 'early': n.early = (n.early || 0) + 1; bossMsg('Zu früh gedrückt!', 'Warte, bis der Balken den grünen Bereich erreicht.'); break;
         case 'dodged': bfl('Ausgewichen!', 'player', 'good'); n.dodged = (n.dodged || 0) + 1; break;
-        case 'noCounter': bossMsg('Zeitbeugung: Ohne Ausweichen gibt es kein Konterfenster.'); break;
+        case 'counter': BT.csum = 0; BT.inCtr = true; break;
+        case 'counterEnd': ctrDone(F); break;
+        case 'noCounter': bossMsg('Zeitbeugung', 'Ohne Ausweichen gibt es kein Konterfenster.'); break;
         case 'phase':
-          if (ov) { ov.phaseBanner(`Phase ${e.n}`, phaseText(b, e.n)); if (!reduceMotion()) ov.shake(); }
-          vibe(50); bossMsg(phaseText(b, e.n));
+          ctrDone(F);
+          if (ov) { ov.phaseBanner(`Phase ${e.n}`, phaseShort(b, e.n), 1100); ov.shake(); }
+          vibe(50); bossMsg(`Phase ${e.n}`, phaseText(b, e.n));
           break;
-        case 'stack': bossMsg(`Drachentanz! ${name} wird stärker: ×${nf1.format(1 + B.sig.drachentanz.per * e.n)} Schaden.`); break;
-        case 'benchHit': if (!n.benchNow) { n.benchNow = 1; bossMsg('Raumverzerrung! Auch dein Team auf der Bank wurde getroffen.'); } break;
-        case 'burn': bossMsg('Verbrennung! Ein Supertrank oder ein Wechsel löscht den Brand.'); break;
-        case 'poison': if (once('poison')) bossMsg(`${m.sp.name} ist vergiftet! Ein Supertrank oder ein Wechsel heilt das Gift.`); break;
-        case 'bossHeal': bfl('+' + fInt(e.d), 'boss', 'heal'); bossMsg(`Lebensraub: ${name} heilt sich.`); break;
-        case 'geoBreak': bfl('Gebrochen!', 'boss', 'good'); bossMsg(`Gebrochen! ${name} ist verwundbar.`); break;
-        case 'geoDone': n.geoDone = (n.geoDone || 0) + 1; bfl('Kraft +' + fPc(B.sig.geokontrolle.power), 'boss', 'info'); bossMsg(`Geokontrolle: ${name} ist jetzt stärker.`); break;
-        case 'shieldBreak': bfl('Schild gebrochen', 'boss', 'good'); bossMsg('Schattenschild gebrochen! Dein Schaden trifft wieder voll.'); break;
-        case 'heal': bfl('+' + fInt(e.d), 'player', 'heal'); bossMsg(`Supertrank! ${m.sp.name} ist wieder fitter${e.cured ? ', Brand und Gift sind weg' : ''}.`); break;
-        case 'xatk': bossMsg(`X-Angriff! ${B.xatkTime} Sekunden lang ×${nf1.format(BALANCE.items.xatk.mult)} Schaden.`); break;
-        case 'faint': { const x = F.G.members[e.idx]; koMark(S, x.id); markDirty(); bossMsg(`${x.sp.name} ist besiegt und kampfunfähig!`); vibe(80); break; }
+        case 'stack': bossMsg('Drachentanz!', `${name} wird stärker: ×${nf1.format(1 + B.sig.drachentanz.per * e.n)} Schaden.`); break;
+        case 'benchHit': if (!n.benchNow) { n.benchNow = 1; bossMsg('Raumverzerrung!', 'Auch dein Team auf der Bank wurde getroffen.'); } break;
+        case 'burn': bossMsg('Verbrennung!', 'Ein Supertrank oder ein Wechsel löscht den Brand.'); break;
+        case 'poison': if (once('poison')) bossMsg(`${m.sp.name} ist vergiftet!`, 'Ein Supertrank oder ein Wechsel heilt das Gift.'); break;
+        case 'bossHeal': bfl('+' + fInt(e.d), 'boss', 'heal'); bossMsg('Lebensraub', `${name} heilt sich.`); break;
+        case 'geoBreak': bfl('Gebrochen!', 'boss', 'good'); bossMsg('Gebrochen!', `${name} ist verwundbar.`); break;
+        case 'geoDone': n.geoDone = (n.geoDone || 0) + 1; bfl('Kraft +' + fPc(B.sig.geokontrolle.power), 'boss', 'info'); bossMsg('Geokontrolle', `${name} ist jetzt stärker.`); break;
+        case 'shieldBreak': bfl('Schild gebrochen', 'boss', 'good'); bossMsg('Schattenschild gebrochen!', 'Dein Schaden trifft wieder voll.'); break;
+        case 'heal': bfl('+' + fInt(e.d), 'player', 'heal'); bossMsg('Supertrank!', `${m.sp.name} ist wieder fitter${e.cured ? ', Brand und Gift sind weg' : ''}.`); break;
+        case 'xatk': bossMsg('X-Angriff!', `${B.xatkTime} Sekunden lang ×${nf1.format(BALANCE.items.xatk.mult)} Schaden.`); break;
+        case 'faint': { const x = F.G.members[e.idx]; koMark(S, x.id); markDirty(); bossMsg(`${x.sp.name} ist besiegt!`, 'Es ist jetzt kampfunfähig.'); vibe(80); break; }
         case 'swap': {
           const x = F.G.members[e.idx];
           if (ov) ov.setPlayer({ id: monKey(x.id), level: x.L, hp: F.mhp[e.idx], maxHp: x.maxHp });
           $('#battle').style.setProperty('--ta', TYPE_COL[x.sp.types[0]]);
-          bossMsg(e.forced ? `${x.sp.name} kommt in den Kampf!` : F.charge ? `Wechsel zu ${x.sp.name}. Der Angriff trifft es nur ${B.switchGuard === 0.5 ? 'halb so stark' : 'abgeschwächt'}.` : `Wechsel zu ${x.sp.name}.`);
+          if (e.forced) bossMsg(`${x.sp.name} kommt in den Kampf!`);
+          else bossMsg(`Wechsel zu ${x.sp.name}`, F.charge ? `Der Angriff trifft es nur ${B.switchGuard === 0.5 ? 'halb so stark' : 'abgeschwächt'}.` : '');
           vibe(20);
           break;
         }
@@ -7034,13 +7546,13 @@ const Music = (function () {
       if (e.e === 'counter' || e.e === 'dodged' || (e.e === 'meHit' && e.kind === 'big')) n.benchNow = 0;
     }
   }
-  // the small picture of a team member on its switch button: the artwork as in the design (without pixel sprites),
-  // if it does not load the sprite, then the emblem (the usual fallback for img.spr)
+  // the small picture of a team member on its switch button: Patch 8.1: the still sprite (small and usually cached),
+  // if it does not load the emblem (the usual fallback for img.spr)
   function mateIcon(id) {
     const c = BT.icons; if (c[id]) return c[id];
     const sh = !!S.shiny[id];
     if (!spritesOK) return (c[id] = emblemHTML(id, 27, 'reg', sh));
-    return (c[id] = `<img class="spr" alt="" draggable="false" decoding="async" data-id="${id}" data-kind="art" data-size="34" data-mode="reg" data-shiny="${sh ? 1 : 0}" data-emb="0.8" src="${ARTWORK}${sh ? 'shiny/' : ''}${id}.png" width="34" height="34">`);
+    return (c[id] = `<img class="spr mate-spr" alt="" draggable="false" decoding="async" data-id="${id}" data-kind="png" data-size="34" data-mode="reg" data-shiny="${sh ? 1 : 0}" data-emb="0.8" src="${sprUrl(id, 'png', sh)}" width="34" height="34">`);
   }
   function bossUI() {
     if (!BT || BT.kind !== 'boss' || !BT.ov) return;
@@ -7061,32 +7573,37 @@ const Music = (function () {
     })));
     const spc = F.taps % K.specialEvery, ready = spc === K.specialEvery - 1;
     ov.setSpecial(spc / (K.specialEvery - 1), ready);
-    // the message line: charge bar, combo, Geokontrolle or counter window, otherwise the latest message
+    // Patch 8.1: the info area above the dodge button always has the same build: a title with the state on the right,
+    // one line below and a bar (charge bar, combo, Geokontrolle, counter window, otherwise the latest message)
     const c = F.charge;
-    let meter = null, dodge = 'idle', label = '';
+    let info, dodge = 'idle', label = '';
     if (c) {
       const st = c.dodge > 0 ? 'done' : c.dodge < 0 ? 'early' : bfDodgeOpen(F) ? 'now' : 'wait';
-      meter = {
+      info = {
         kind: 'charge', title: `${name} lädt ${moveName(b, c.k)}`, p: c.t / c.dur, zone: [1 - B.dodgeWindow / c.dur, 1], tone: st,
         state: st === 'done' ? 'Ausgewichen' : st === 'early' ? 'Zu früh' : st === 'now' ? 'Jetzt!' : 'Warten',
+        sub: st === 'done' ? 'Gleich kommt dein Konterfenster.' : st === 'early' ? 'Zu früh gedrückt, dieser Angriff trifft.' : c.followUp ? 'Kombo: der zweite Angriff. Noch einmal ausweichen!' : 'Ausweichen, sobald der Balken im grünen Bereich ist.',
       };
       dodge = st; label = st === 'now' ? 'Jetzt ausweichen!' : st === 'done' ? 'Ausgewichen' : st === 'early' ? 'Zu früh gedrückt' : 'Ausweichen';
     } else if (F.comboT > 0) {
-      meter = { kind: 'combo', title: 'Kombo! Der nächste Angriff kommt', p: 1 - F.comboT / B.comboGap, tone: 'wait', state: '' };
+      info = { kind: 'combo', title: 'Kombo!', p: 1 - F.comboT / B.comboGap, tone: 'wait', state: '', sub: 'Gleich kommt der nächste Großangriff.' };
       dodge = 'wait';
     } else if (F.sig.geo) {
       const g = F.sig.geo, gk = sg.geokontrolle;
-      meter = { kind: 'geo', title: `Geokontrolle: ${fPc(gk.need)} Schaden in ${gk.time} s`, p: g.dmg / (G.hpMax * gk.need), state: nf1.format(Math.max(0, g.dur - g.t)) + ' s' };
+      info = { kind: 'geo', title: 'Geokontrolle', p: g.dmg / (G.hpMax * gk.need), state: nf1.format(Math.max(0, g.dur - g.t)) + ' s', sub: `Mach ${fPc(gk.need)} Schaden, geschafft: ${fPc(Math.min(gk.need, g.dmg / G.hpMax))}` };
     } else if (F.counterT > 0) {
-      meter = { kind: 'counter', title: `Konterfenster: ×${nf1.format(B.counterMult)} Schaden`, p: F.counterT / F.counterMax, state: nf1.format(F.counterT) + ' s' };
-    }
-    ov.setMeter(meter);
-    ov.setDodge(dodge, label);
-    if (!meter) {
+      info = { kind: 'counter', title: `Konterfenster ×${nf1.format(B.counterMult)}`, p: F.counterT / F.counterMax, state: nf1.format(F.counterT) + ' s', sub: `Konterschaden bisher: ${fInt(BT.csum)}` };
+    } else {
       const sig = sigText(BT.bi);
-      ov.setMessage(BT.msg && F.t - BT.msgAt < 5 ? BT.msg : sig && sig.h ? `${sig.n}: ${sig.h}` : `Tippe auf ${name}, um anzugreifen.`);
+      info = BT.msg && F.t - BT.msgAt < 5 ? { kind: 'idle', title: BT.msg, sub: BT.msgSub }
+        : sig && sig.h ? { kind: 'idle', title: 'Signatur: ' + sig.n, sub: sig.h } : { kind: 'idle', title: `Tippe auf ${name}, um anzugreifen.`, sub: '' };
     }
+    ov.setInfo(info);
+    ov.setDodge(dodge, label);
     ov.setCounter(F.counterT > 0);
+    // Patch 8.1: the sum of the counter damage, during the window and a moment after it
+    if (BT.inCtr && F.counterT <= 0) ctrDone(F);
+    ov.counterSum(BT.csum, F.counterT > 0 ? 'on' : BT.csum > 0 && F.t - BT.csumAt < 1.6 ? 'done' : 'off');
     // what is going on right now: on the boss (under the banner) and on the own Pokémon
     const bp = [], pp = [];
     if (F.roarT > 0) bp.push({ text: 'Brüllt, unverwundbar', tone: 'boss' });
@@ -7129,8 +7646,8 @@ const Music = (function () {
     const kos = G.members.filter((m, i) => F.mhp[i] <= 0).map(m => m.id);
     for (const id of kos) if (!isKO(S, id)) koMark(S, id);
     if (BT.ov) {
-      BT.ov.setMeter(null); BT.ov.setDodge('idle'); BT.ov.setCounter(false);
-      BT.ov.setMessage(won ? `${sp.name} ist besiegt!` : timeout ? 'Die Zeit ist abgelaufen.' : 'Dein Team wurde besiegt.');
+      BT.ov.setDodge('idle'); BT.ov.setCounter(false); BT.ov.counterSum(0, 'off');
+      BT.ov.setInfo({ kind: 'idle', title: won ? `${sp.name} ist besiegt!` : timeout ? 'Die Zeit ist abgelaufen.' : 'Dein Team wurde besiegt.', sub: '' });
     }
     if (won) Music.victory(); else Music.mode('silent');
     const dodged = F.bigs ? `${F.dodges} von ${F.bigs}` : 'keiner angekündigt';
@@ -7753,10 +8270,10 @@ const Music = (function () {
         <li><b>Entwicklung:</b> Es entwickelt sich zu den Original-Levels. Steine kaufst du, sobald es so weit ist. Tausch- und Freundschaftsentwicklungen passieren hier per Level.</li>
         <li><b>Kampf:</b> Nach der letzten Entwicklung kämpft dein Pokémon gegen einen ebenbürtigen Gegner aus der Region. Nach dem Sieg ist es im Pokédex gelevelt.</li>
         <li><b>Pokédex:</b> Jedes gelevelte Pokémon gibt +2 % auf EP und Coins und verdient dauerhaft mit.</li>
-        <li><b>Einzeltraining:</b> Unter Arena levelst du eins deiner gelevelten Pokémon separat, nur durch Tippen, bis Lv. ${BALANCE.solo.maxLevel}. Je höher das Level, desto mehr EP braucht es. Jedes Pokémon behält seinen Fortschritt.</li>
+        <li><b>Einzeltraining:</b> Unter Arena levelst du eins deiner gelevelten Pokémon separat, nur durch Tippen, bis Lv. ${BALANCE.solo.maxLevel}. Je höher das Level, desto mehr EP braucht es, und desto mehr EP bringt jeder Tipp, bis zum Cap von ${fInt(BALANCE.solo.tapCap)} EP ab Lv. ${BALANCE.solo.tapCapLevel}. Jedes Pokémon behält seinen Fortschritt.</li>
         <li><b>Arena:</b> Mit diesem Pokémon forderst du die Arenaleiter heraus, in der Reihenfolge der Originalspiele. In Alola übernehmen die vier Inselkönige diese Rolle und vergeben Abzeichen statt Orden. Jeder Leiter hat ein festes Level und schickt 3 Pokémon seines Typs nacheinander in den Kampf.</li>
         <li><b>Typvorteile:</b> Mit Typvorteil machst du mehr Schaden, mit Nachteil weniger. Für den Gegner gilt das genauso. Vor jedem Kampf siehst du es pro Pokémon: „Du ×2“ heißt doppelter Schaden für dich, „Er ×2“ doppelter Schaden für ihn.</li>
-        <li><b>Orden:</b> Jeder Sieg zählt den Orden, Coins und EP fürs Einzeltraining gibt es auch. Ab dem zweiten Sieg gegen denselben Leiter gibt es nur noch ${Math.round(BALANCE.gyms.soloEp.repeatMult * 100)}${NB}% der EP. Jeder verschiedene Orden macht das Tippen im Einzeltraining schneller.</li>
+        <li><b>Orden:</b> Jeder Sieg zählt den Orden, Coins und EP fürs Einzeltraining gibt es auch. Ab dem zweiten Sieg gegen denselben Leiter gibt es nur noch ${Math.round(BALANCE.gyms.soloEp.repeatMult * 100)}${NB}% der EP. Jeder verschiedene Orden und jeder Sieg erhöhen den Startwert der EP pro Tipp im Einzeltraining.</li>
         <li><b>Bosse:</b> ${BOSSES.length} starke Pokémon, von Boss 1 bis ${BOSSES.length} immer schwerer. Antreten dürfen Pokémon ab Lv. ${BALANCE.bosses.minLevel} aus dem Einzeltraining, allein oder als Team aus bis zu ${BALANCE.bosses.teamMax}. Drei Teams kannst du speichern. Jeder Sieg bringt Diamanten und EP fürs Team.</li>
         <li><b>Bosskampf:</b> Der Boss lädt seine Großangriffe sichtbar auf. Drück <b>Ausweichen</b>, sobald der Ladebalken den grünen Bereich erreicht, sonst gibt es massiven Schaden. Danach ist er kurz verwundbar: Im Konterfenster macht jeder Tipp ×${nf1.format(BALANCE.bosses.counterMult)} Schaden. Bei halben KP wechselt er die Phase und wird aggressiver. Über die kleinen Bilder deines Teams wechselst du das Pokémon. Jeder Boss hat eine eigene Signatur, die er im Intro zeigt. Der Autotipper pausiert im Bosskampf.</li>
         <li><b>Farben:</b> Sie vergleichen das Durchschnittslevel deines Teams mit dem Bosslevel. Wie viel darunter noch geht, hängt von der Stufe ab: in der Grundstufe grün bis ${fPc(bossRoom(0) / 2)} darunter und gelb bis ${fPc(bossRoom(0))}, in NG+${BALANCE.bosses.maxTier} nur noch ${fPc(bossRoom(BALANCE.bosses.maxTier) / 2)} und ${fPc(bossRoom(BALANCE.bosses.maxTier))}. Rot liegt noch tiefer.</li>
@@ -7866,15 +8383,17 @@ const Music = (function () {
       <div class="row"><button class="btn gold" data-autofocus id="wb-ok" type="button">Weiter</button></div>`, { onClose: () => { welcome = null; } });
     $('#wb-ok', el).onclick = () => closeSheet();
   }
-  function offlineCatchup(sec, showModal) {
+  // away = false: the gap was no absence (a stalled page, time in a boss fight). Patch 8.1: its progress is credited
+  // like play time, without the offline bonus, and it counts as play time, not as time away.
+  function offlineCatchup(sec, showModal, away = true) {
     const real = sec;
     sec = Math.min(sec, K.offlineCapH * 3600);
     if (!S || sec < 1 || pendingStarter() || S.done) return;
-    const boost = tBonus(S, 'offline');
+    const boost = away ? tBonus(S, 'offline') : 1, stat = away ? 'away' : 'time';
     if (gated()) { // no Pokémon in training, only the team income
       const coins = cpsNow(W, S) * sec * boost;
       S.coins += coins; S.life += coins;
-      S.stats.away = (S.stats.away || 0) + sec;
+      S.stats[stat] = (S.stats[stat] || 0) + sec;
       markDirty();
       if (showModal) addWelcome({ sec: real, capped: real > sec, coins, gated: true, evos: [], note: `<p>${esc(W.R[gateRegion(W, S)][0])} wartet noch darauf, mit Diamanten freigeschaltet zu werden.</p>` });
       return;
@@ -7884,7 +8403,7 @@ const Music = (function () {
     const lv0 = S.lvl, sp0 = c.sp;
     const coins = cps * sec * boost;
     S.coins += coins; S.life += coins;
-    S.stats.away = (S.stats.away || 0) + sec;
+    S.stats[stat] = (S.stats[stat] || 0) + sec;
     // trainer EP boost: only the part of the absence it covered counts double
     const tNow = Date.now(), covered = clamp(Math.min(tNow, S.boost.tep || 0) - (tNow - real * 1000), 0, real * 1000) / (real * 1000 || 1);
     CLOCK.tepFactor = 1 + (BALANCE.trainerBoosts.ep.mult - 1) * covered;
@@ -7943,14 +8462,28 @@ const Music = (function () {
 
   // ---------- main loop ----------
   let last = performance.now(), lastWall = Date.now(), uiT = 0, saveT = 0, cloudT = 0;
+  // Patch 8.1: was the page really in the background since the last frame (app switched, phone locked, tab hidden)?
+  // Only then a gap counts as an absence with "Willkommen zurück". A page that only hung for a moment, and the
+  // time in a boss fight, never do.
+  let wasHidden = !!document.hidden;
+  document.addEventListener('visibilitychange', () => { if (document.hidden) wasHidden = true; });
+  window.addEventListener('pagehide', () => { wasHidden = true; });
+  document.addEventListener('freeze', () => { wasHidden = true; });
   function frame(now) {
     let dt = (now - last) / 1000; last = now;
     // Time away (app in the background, phone asleep) is the wall-clock gap between two frames.
     // Each gap is seen by exactly one frame, so every absence is credited exactly once.
     const wall = Date.now(), gap = (wall - lastWall) / 1000; lastWall = wall;
+    const hid = wasHidden; wasHidden = !!document.hidden;
     if (S) {
-      if (gap > 3) { offlineCatchup(gap, gap >= 60); if (BT) BT.paused = false; dt = 0; }
-      else dt = clamp(dt, 0, 3);
+      if (gap > 3) {
+        // The progress of the gap is always credited. An absence is only a gap in which the app was really left
+        // (hidden, closed or frozen) or one of 10 minutes or more; anything else is play time. The window comes only
+        // for an absence of a minute or more and never in a boss fight.
+        const away = hid || gap >= 600;
+        offlineCatchup(gap, away && gap >= 60 && !(BT && BT.kind === 'boss'), away);
+        if (BT) BT.paused = false; dt = 0;
+      } else dt = clamp(dt, 0, 3);
       if (dt > 0) {
         if (!mainIdle()) {
           const c = ctx(W, S);
